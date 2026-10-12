@@ -1,0 +1,48 @@
+# Local assistant notes and editor files
+.workbuddy/
+.vscode/
+.idea/
+
+# Local competition attachments, including the registration form
+/docs/competition/*.docx
+/docs/competition/*.xlsx
+/docs/competition/private/
+
+# Datasets, experiment output, and model artifacts
+/data/raw/
+/data/processed/
+/runs/
+/checkpoints/
+/models/
+/outputs/
+/logs/
+*.log
+*.pt
+*.pth
+*.ckpt
+*.onnx
+*.safetensors
+
+# Python and local environments
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.env
+.env.*
+!.env.example
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+dist/
+build/
+
+# Frontend dependencies and build output
+node_modules/
+.next/
+coverage/
+
+# OS clutter
+.DS_Store
+Thumbs.db
