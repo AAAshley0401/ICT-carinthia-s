@@ -133,12 +133,12 @@
   <aside class="panel right">
     <h2>Agent 动作（外壳必须真的有 Agent 行为）</h2>
     <div class="agent">
-      <div class="who"><i style="background:#165DFF"></i>分拣 Agent</div>
-      <div class="act" id="a1">—</div>
-    </div>
-    <div class="agent">
       <div class="who"><i style="background:#00B42A"></i>检测 Agent</div>
       <div class="act" id="a2">—</div>
+    </div>
+    <div class="agent">
+      <div class="who"><i style="background:#165DFF"></i>分拣 Agent</div>
+      <div class="act" id="a1">—</div>
     </div>
     <div class="agent">
       <div class="who"><i style="background:#FF7D00"></i>仲裁 Agent</div>
@@ -235,8 +235,8 @@ function renderAgent(){
   var w = WAFERS[cur];
   var low = w.conf < 0.70;
   document.getElementById("a1").textContent =
-    "本批 8 片：按置信度自主分流 —— " + w.id + " 置信度 " + w.conf.toFixed(2) +
-    (low ? "，低于阈值，标为「判不准」，转人工。" : "，高于阈值，直接进入检测队列。");
+    "读取 " + w.id + " 的检测置信度 " + w.conf.toFixed(2) +
+    (low ? "，低于阈值，标为「判不准」，转人工。" : "，高于阈值，进入常规处置。");
   document.getElementById("a2").textContent =
     "对 " + w.id + " 执行定位：检出 " + w.defs.length + " 处缺陷，输出掩码与边界框。";
   document.getElementById("a3").textContent =

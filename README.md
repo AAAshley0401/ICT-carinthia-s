@@ -10,13 +10,15 @@
 | `docs/competition/` | 本地赛事通知与报名表附件，不纳入 Git |
 | [`prototype/`](prototype/) | 可直接用浏览器打开的界面示意 |
 | `src/` | 后续放检测与分级模型代码 |
-| `agentarts/` | 后续放 AgentArts 编排与工具接入配置 |
+| [`agentarts/`](agentarts/) | AgentArts 工具接口约定与接入步骤 |
 | `eval/` | 后续放指标计算与消融记录脚本 |
 | `data/raw/` | 本地原始数据，只读保存，不纳入 Git |
 | `data/processed/` | 本地预处理数据，不纳入 Git |
 | `runs/` | 本地训练输出与实验记录，不纳入 Git |
 
 从[项目文档](docs/项目文档-明察DefectLens.md)了解完整方案，从[起跑清单](docs/起跑清单-明察DefectLens.md)了解当前分工。界面示意位于[prototype/明察-DefectLens.html](prototype/明察-DefectLens.html)。
+
+等待数据期间可先用 `python src/mock_inference_server.py` 启动本地模拟接口；它不读取图片，也不产生实测结果。接入说明见[agentarts/README.md](agentarts/README.md)。
 
 ## 当前状态
 
