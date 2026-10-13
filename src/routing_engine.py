@@ -7,13 +7,8 @@ from dataclasses import asdict, dataclass
 from enum import Enum
 from typing import Any, Mapping
 
+from .detection_validation import ValidationStatus, has_valid_shape, validate_detection_result
 from .task_state import InspectionTask, TaskState
-
-
-GRADES = frozenset({"Acceptable", "Marginal NG", "NG", "Gross NG"})
-REQUIRED_FIELDS = frozenset(
-    {"sample_id", "mode", "demo_only", "image_analyzed", "model_version", "grade", "confidence", "defects"}
-)
 
 
 class SelectedPath(str, Enum):
@@ -38,6 +33,14 @@ class RoutingDecision:
         result["selected_path"] = self.selected_path.value
         result["reason_codes"] = list(self.reason_codes)
         return result
+
+
+@dataclass(frozen=True)
+class PreviewRoutingDecision:
+    selected_path: SelectedPath
+    reason_codes: tuple[str, ...]
+    explanation: str
+    human_review_required: bool
 
 
 @dataclass(frozen=True)
@@ -86,37 +89,73 @@ def route_detection(
     policy = policy or RoutingPolicy()
     task.transition_to(TaskState.DETECTING)
 
-    if tool_error is not None:
-        return _fail(task, "MODEL_TIMEOUT" if _is_timeout(tool_error) else "TOOL_ERROR")
-    if not isinstance(result, Mapping):
-        return _fail(task, "INVALID_RESPONSE_FORMAT")
-    if result.get("error") is not None:
-        return _fail(task, "MODEL_TIMEOUT" if _is_timeout(result["error"]) else "TOOL_ERROR")
-
-    # The mock currently lacks fields needed by the real model contract. Its
-    # explicit demo flag takes priority so it is never mistaken for real output.
-    if result.get("demo_only") is True:
+    validation = validate_detection_result(result, task.task_id, tool_error=tool_error)
+    if validation.status is ValidationStatus.FAILED:
+        return _fail(task, validation.reason_code or "INVALID_RESPONSE_FORMAT")
+    if validation.status is ValidationStatus.INVALID_RESULT:
         task.transition_to(TaskState.INVALID_RESULT)
+        if validation.reason_code == "DEMO_RESULT":
+            explanation = "Demo output cannot be used for real production decisions."
+        else:
+            explanation = "Detection was not produced by a verified image analysis result."
         return _decision(
-            task, SelectedPath.FAILED, ("DEMO_RESULT",),
-            "Demo output cannot be used for real production decisions.",
-            "Cannot generate reliable suggestion", review=False,
-        )
-
-    if REQUIRED_FIELDS - result.keys():
-        return _fail(task, "MISSING_REQUIRED_FIELDS")
-    if not _valid_format(result, task.task_id):
-        return _fail(task, "INVALID_RESPONSE_FORMAT")
-    if result["mode"] != "model" or result["image_analyzed"] is not True:
-        task.transition_to(TaskState.INVALID_RESULT)
-        return _decision(
-            task, SelectedPath.FAILED, ("UNTRUSTED_SOURCE",),
-            "Detection was not produced by a verified image analysis result.",
+            task, SelectedPath.FAILED, (validation.reason_code or "UNTRUSTED_SOURCE",),
+            explanation,
             "Cannot generate reliable suggestion", review=False,
         )
 
     task.transition_to(TaskState.DETECT_SUCCESS)
     task.transition_to(TaskState.SORTING)
+    reasons = _review_reasons(result, policy)
+    if reasons:
+        task.transition_to(TaskState.REVIEW_REQUIRED)
+        return _decision(
+            task, SelectedPath.REVIEW, reasons,
+            "Detection needs human review: " + ", ".join(reasons) + ".",
+            "Human review required", review=True,
+        )
+
+    task.transition_to(TaskState.SUGGESTION_READY)
+    return _decision(
+        task, SelectedPath.NORMAL, ("HIGH_CONFIDENCE",),
+        "Validated detection satisfies the prototype routing rule; suggestion requires human confirmation.",
+        "Generate normal quality suggestion", review=False,
+    )
+
+
+def preview_demo_route(
+    result: object, task_id: str, *, policy: RoutingPolicy | None = None
+) -> PreviewRoutingDecision:
+    """Show the route rules would choose for a mock, without authorizing action."""
+    if not isinstance(result, Mapping) or result.get("demo_only") is not True:
+        raise ValueError("preview_demo_route accepts only demo results")
+    validation = validate_detection_result(result, task_id)
+    if validation.status is ValidationStatus.FAILED:
+        code = validation.reason_code or "INVALID_RESPONSE_FORMAT"
+        return PreviewRoutingDecision(
+            SelectedPath.FAILED, (code,),
+            f"Simulated detector failed: {code}. No quality suggestion is available.", False,
+        )
+    if not has_valid_shape(result, task_id):
+        return PreviewRoutingDecision(
+            SelectedPath.FAILED, ("INVALID_RESPONSE_FORMAT",),
+            "Simulated detector returned an invalid response format.", False,
+        )
+    reasons = _review_reasons(result, policy or RoutingPolicy())
+    if reasons:
+        return PreviewRoutingDecision(
+            SelectedPath.REVIEW, reasons,
+            "Preview requires human review because: " + ", ".join(reasons) + ".",
+            True,
+        )
+    return PreviewRoutingDecision(
+        SelectedPath.NORMAL, ("HIGH_CONFIDENCE",),
+        "Preview suggests a normal path; no real image was analyzed or production decision made.",
+        False,
+    )
+
+
+def _review_reasons(result: Mapping[str, Any], policy: RoutingPolicy) -> tuple[str, ...]:
     reasons: list[str] = []
     if result["confidence"] < policy.confidence_threshold:
         reasons.append("LOW_CONFIDENCE")
@@ -136,20 +175,7 @@ def route_detection(
             reasons.append("SCREENING_SCORE_MISSING")
         elif result["screening_confidence"] < policy.confidence_threshold:
             reasons.append("LOW_SCREENING_CONFIDENCE")
-    if reasons:
-        task.transition_to(TaskState.REVIEW_REQUIRED)
-        return _decision(
-            task, SelectedPath.REVIEW, tuple(reasons),
-            "Detection needs human review: " + ", ".join(reasons) + ".",
-            "Human review required", review=True,
-        )
-
-    task.transition_to(TaskState.SUGGESTION_READY)
-    return _decision(
-        task, SelectedPath.NORMAL, ("HIGH_CONFIDENCE",),
-        "Validated detection satisfies the prototype routing rule; suggestion requires human confirmation.",
-        "Generate normal quality suggestion", review=False,
-    )
+    return tuple(reasons)
 
 
 def _fail(task: InspectionTask, code: str) -> RoutingDecision:
@@ -159,57 +185,3 @@ def _fail(task: InspectionTask, code: str) -> RoutingDecision:
         f"Detection failed validation or execution: {code}. No reliable suggestion is available.",
         "Cannot generate reliable suggestion", review=False,
     )
-
-
-def _is_timeout(error: object) -> bool:
-    return (
-        isinstance(error, TimeoutError)
-        or error == "MODEL_TIMEOUT"
-        or (isinstance(error, Mapping) and error.get("code") == "MODEL_TIMEOUT")
-    )
-
-
-def _valid_format(result: Mapping[str, Any], task_id: str) -> bool:
-    if result["sample_id"] != task_id:
-        return False
-    if not isinstance(result["mode"], str) or type(result["demo_only"]) is not bool:
-        return False
-    if type(result["image_analyzed"]) is not bool:
-        return False
-    if not isinstance(result["model_version"], str) or not result["model_version"].strip():
-        return False
-    if not isinstance(result["grade"], str) or result["grade"] not in GRADES:
-        return False
-    if not _is_score(result["confidence"]):
-        return False
-    if not isinstance(result["defects"], list):
-        return False
-    for defect in result["defects"]:
-        if not isinstance(defect, Mapping):
-            return False
-        if not {"category", "severity", "confidence"} <= defect.keys():
-            return False
-        if not isinstance(defect["category"], str) or not defect["category"].strip():
-            return False
-        if not isinstance(defect["severity"], str) or defect["severity"] not in GRADES:
-            return False
-        if not _is_score(defect["confidence"]):
-            return False
-        bbox = defect.get("bbox_xyxy")
-        if bbox is not None and (
-            not isinstance(bbox, list)
-            or len(bbox) != 4
-            or any(type(value) not in (int, float) or not math.isfinite(value) for value in bbox)
-            or bbox[0] >= bbox[2]
-            or bbox[1] >= bbox[3]
-        ):
-            return False
-    if "screening_confidence" in result and not _is_score(result["screening_confidence"]):
-        return False
-    if "boundary_distance" in result and not _is_score(result["boundary_distance"]):
-        return False
-    if "near_boundary" in result and type(result["near_boundary"]) is not bool:
-        return False
-    if "conflict" in result and type(result["conflict"]) is not bool:
-        return False
-    return True
