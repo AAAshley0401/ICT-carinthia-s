@@ -1,16 +1,15 @@
-"""Deterministic detector simulator. It never opens or analyzes an image."""
+"""Versioned mock detector output; no image is opened or analyzed."""
 
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from typing import Any
 from urllib.parse import quote
 
 
 class DetectorAgent:
-    """Produce one of three fixed, explicitly simulated detection outcomes."""
-
     MODES = frozenset({"normal", "boundary", "failure"})
-    MODEL_VERSION = "mock-detector-v1"
+    MODEL_VERSION = "mock-detector-v2"
 
     def __init__(self, mode: str = "normal") -> None:
         if not isinstance(mode, str) or mode not in self.MODES:
@@ -23,56 +22,38 @@ class DetectorAgent:
         if not isinstance(image_path, str) or not image_path.strip():
             raise ValueError("image_path must be a nonempty string")
 
-        # The requested fields are always present. Extra fields preserve the
-        # existing routing contract; neither path nor mask references are read.
         result: dict[str, Any] = {
+            "schema_version": "1.0",
             "sample_id": sample_id,
-            "defect_type": "",
-            "confidence": 0.0,
-            "severity": "",
-            "model_version": self.MODEL_VERSION,
-            "mask": "",
-            "demo_only": True,
-            "error": None,
+            "status": "success",
             "mode": "mock",
+            "demo_only": True,
             "image_analyzed": False,
-            "grade": None,
+            "model_version": self.MODEL_VERSION,
+            "calibration_version": "mock-unvalidated",
+            "inference_timestamp": datetime.now(timezone.utc).isoformat(),
+            "defect_probability": 0.05,
             "defects": [],
-            "conflict": False,
+            "error": None,
         }
-
-        if self.mode == "normal":
-            result.update(
-                defect_type="none",
-                confidence=0.98,
-                severity="Acceptable",
-                grade="Acceptable",
-                screening_confidence=0.98,
-            )
-        elif self.mode == "boundary":
-            mask = f"mock://masks/{quote(sample_id, safe='')}/scratch"
-            result.update(
-                defect_type="scratch",
-                confidence=0.74,
-                severity="Marginal NG",
-                grade="Marginal NG",
-                mask=mask,
-                conflict=True,
-                near_boundary=True,
-                defects=[
-                    {
-                        "category": "scratch",
-                        "confidence": 0.78,
-                        "severity": "Marginal NG",
-                        "bbox_xyxy": [320, 390, 500, 470],
-                        "mask": mask,
-                    }
-                ],
-            )
-        else:
-            result["error"] = {
-                "code": "MODEL_TIMEOUT",
-                "message": "Simulated detector timeout; no image was analyzed.",
-            }
-
+        if self.mode == "boundary":
+            result["defect_probability"] = 0.95
+            result["defects"] = [{
+                "defect_id": "d1",
+                "defect_type": "scratch",
+                "detection_confidence": 0.96,
+                "class_confidence": 0.91,
+                "severity": "Marginal NG",
+                "severity_confidence": 0.52,
+                "severity_probabilities": {
+                    "Acceptable": 0.05,
+                    "Marginal NG": 0.52,
+                    "NG": 0.43,
+                    "Gross NG": 0.0,
+                },
+                "bbox_xyxy": [320, 390, 500, 470],
+                "mask_ref": f"mock://masks/{quote(sample_id, safe='')}/d1",
+            }]
+        elif self.mode == "failure":
+            result.update(status="failed", defect_probability=None, error="timeout")
         return result

@@ -1,4 +1,4 @@
-"""Read-only validation of detector responses and their provenance."""
+"""Validate the detector's versioned evidence contract and provenance."""
 
 from __future__ import annotations
 
@@ -8,15 +8,21 @@ from enum import Enum
 from typing import Any, Mapping
 
 
-GRADES = frozenset({"Acceptable", "Marginal NG", "NG", "Gross NG"})
-REQUIRED_FIELDS = frozenset(
-    {"sample_id", "mode", "demo_only", "image_analyzed", "model_version", "grade", "confidence", "defects"}
-)
+GRADES = ("Acceptable", "Marginal NG", "NG", "Gross NG")
+REQUIRED_FIELDS = frozenset({
+    "schema_version", "sample_id", "status", "mode", "demo_only",
+    "image_analyzed", "model_version", "calibration_version",
+    "defect_probability", "defects", "error",
+})
+REQUIRED_DEFECT_FIELDS = frozenset({
+    "defect_id", "defect_type", "detection_confidence", "class_confidence",
+    "severity", "severity_confidence", "severity_probabilities",
+    "bbox_xyxy", "mask_ref",
+})
 
 
 class ValidationStatus(str, Enum):
     VALID = "VALID"
-    FAILED = "FAILED"
     INVALID_RESULT = "INVALID_RESULT"
 
 
@@ -30,64 +36,61 @@ class ValidationResult:
         return self.status is ValidationStatus.VALID
 
 
-def is_timeout(error: object) -> bool:
-    return (
-        isinstance(error, TimeoutError)
-        or error == "MODEL_TIMEOUT"
-        or (isinstance(error, Mapping) and error.get("code") == "MODEL_TIMEOUT")
-    )
-
-
-def _is_score(value: object) -> bool:
+def is_score(value: object) -> bool:
     return type(value) in (float, int) and math.isfinite(value) and 0 <= value <= 1
 
 
 def has_valid_shape(result: Mapping[str, Any], task_id: str) -> bool:
-    """Validate fields and types without trusting the result's source."""
+    """Check the success payload's fields and value ranges, without provenance."""
     if REQUIRED_FIELDS - result.keys():
         return False
-    if result["sample_id"] != task_id:
+    if result["schema_version"] != "1.0" or result["sample_id"] != task_id:
         return False
-    if not isinstance(result["mode"], str) or type(result["demo_only"]) is not bool:
+    if result["status"] != "success" or result["error"] is not None:
         return False
-    if type(result["image_analyzed"]) is not bool:
+    if not isinstance(result["mode"], str):
         return False
-    if not isinstance(result["model_version"], str) or not result["model_version"].strip():
+    if type(result["demo_only"]) is not bool or type(result["image_analyzed"]) is not bool:
         return False
-    if not isinstance(result["grade"], str) or result["grade"] not in GRADES:
-        return False
-    if not _is_score(result["confidence"]):
-        return False
-    if not isinstance(result["defects"], list):
-        return False
-    for defect in result["defects"]:
-        if not isinstance(defect, Mapping):
+    for field in ("model_version", "calibration_version"):
+        if not isinstance(result[field], str) or not result[field].strip():
             return False
-        if not {"category", "severity", "confidence"} <= defect.keys():
+    if not is_score(result["defect_probability"]):
+        return False
+    defects = result["defects"]
+    if not isinstance(defects, list):
+        return False
+    seen_ids: set[str] = set()
+    for defect in defects:
+        if not isinstance(defect, Mapping) or REQUIRED_DEFECT_FIELDS - defect.keys():
             return False
-        if not isinstance(defect["category"], str) or not defect["category"].strip():
+        for field in ("defect_id", "defect_type", "mask_ref"):
+            if not isinstance(defect[field], str) or not defect[field].strip():
+                return False
+        if defect["defect_id"] in seen_ids:
             return False
-        if not isinstance(defect["severity"], str) or defect["severity"] not in GRADES:
+        seen_ids.add(defect["defect_id"])
+        for field in ("detection_confidence", "class_confidence", "severity_confidence"):
+            if not is_score(defect[field]):
+                return False
+        if defect["severity"] not in GRADES:
             return False
-        if not _is_score(defect["confidence"]):
+        probabilities = defect["severity_probabilities"]
+        if not isinstance(probabilities, Mapping) or set(probabilities) != set(GRADES):
             return False
-        bbox = defect.get("bbox_xyxy")
-        if bbox is not None and (
+        if not all(is_score(probabilities[grade]) for grade in GRADES):
+            return False
+        if not math.isclose(sum(probabilities.values()), 1.0, abs_tol=0.001):
+            return False
+        bbox = defect["bbox_xyxy"]
+        if (
             not isinstance(bbox, list)
             or len(bbox) != 4
             or any(type(value) not in (int, float) or not math.isfinite(value) for value in bbox)
-            or bbox[0] >= bbox[2]
-            or bbox[1] >= bbox[3]
+            or bbox[0] < 0 or bbox[1] < 0
+            or bbox[0] >= bbox[2] or bbox[1] >= bbox[3]
         ):
             return False
-    if "screening_confidence" in result and not _is_score(result["screening_confidence"]):
-        return False
-    if "boundary_distance" in result and not _is_score(result["boundary_distance"]):
-        return False
-    if "near_boundary" in result and type(result["near_boundary"]) is not bool:
-        return False
-    if "conflict" in result and type(result["conflict"]) is not bool:
-        return False
     return True
 
 
@@ -95,23 +98,15 @@ def validate_detection_result(
     result: object, task_id: str, *, tool_error: object = None
 ) -> ValidationResult:
     if tool_error is not None:
-        return ValidationResult(
-            ValidationStatus.FAILED,
-            "MODEL_TIMEOUT" if is_timeout(tool_error) else "TOOL_ERROR",
-        )
+        return ValidationResult(ValidationStatus.INVALID_RESULT, "TOOL_ERROR")
     if not isinstance(result, Mapping):
-        return ValidationResult(ValidationStatus.FAILED, "INVALID_RESPONSE_FORMAT")
-    if result.get("error") is not None:
-        return ValidationResult(
-            ValidationStatus.FAILED,
-            "MODEL_TIMEOUT" if is_timeout(result["error"]) else "TOOL_ERROR",
-        )
+        return ValidationResult(ValidationStatus.INVALID_RESULT, "INVALID_SCHEMA")
+    if result.get("error") is not None or result.get("status") == "failed":
+        return ValidationResult(ValidationStatus.INVALID_RESULT, "TOOL_ERROR")
     if result.get("demo_only") is True:
         return ValidationResult(ValidationStatus.INVALID_RESULT, "DEMO_RESULT")
-    if REQUIRED_FIELDS - result.keys():
-        return ValidationResult(ValidationStatus.FAILED, "MISSING_REQUIRED_FIELDS")
     if not has_valid_shape(result, task_id):
-        return ValidationResult(ValidationStatus.FAILED, "INVALID_RESPONSE_FORMAT")
+        return ValidationResult(ValidationStatus.INVALID_RESULT, "INVALID_SCHEMA")
     if result["mode"] != "model" or result["image_analyzed"] is not True:
-        return ValidationResult(ValidationStatus.INVALID_RESULT, "UNTRUSTED_SOURCE")
+        return ValidationResult(ValidationStatus.INVALID_RESULT, "INVALID_SCHEMA")
     return ValidationResult(ValidationStatus.VALID)
