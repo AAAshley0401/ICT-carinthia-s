@@ -10,7 +10,7 @@ class WorkflowTests(unittest.TestCase):
         self.assertEqual(output["path"], "NORMAL")
         self.assertEqual(output["reason_codes"], ["LOW_DEFECT_PROBABILITY"])
         self.assertEqual(output["evidence"]["defect_probability"], 0.05)
-        self.assertEqual(output["agent_called"], ["DetectorAgent", "RouterAgent"])
+        self.assertEqual(output["agent_called"], ["DetectorAgent", "ValidationAgent", "RoutingEngine"])
         self.assertEqual(output["validated_decision"]["current_state"], "INVALID_RESULT")
         self.assertEqual(output["validated_decision"]["reason_codes"], ["DEMO_RESULT"])
         self.assertFalse(output["production_usable"])
