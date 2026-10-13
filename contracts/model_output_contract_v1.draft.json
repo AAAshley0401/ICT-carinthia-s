@@ -1,0 +1,64 @@
+{
+  "contract_version": "1.0",
+  "status": "PENDING_MODEL_OWNER_CONFIRMATION",
+  "scope": "Current Agent output requirements and facts needed to map a real model through ModelAdapter; this is not a frozen production contract.",
+  "agent_schema": {
+    "schema_version": "1.0",
+    "required_success_fields": [
+      "sample_id",
+      "status",
+      "mode",
+      "demo_only",
+      "image_analyzed",
+      "model_version",
+      "calibration_version",
+      "defect_probability",
+      "defects",
+      "error"
+    ],
+    "required_defect_fields": [
+      "defect_id",
+      "defect_type",
+      "detection_confidence",
+      "class_confidence",
+      "severity",
+      "severity_confidence",
+      "severity_probabilities",
+      "bbox_xyxy",
+      "mask_ref"
+    ],
+    "severity_labels": [
+      "Acceptable",
+      "Marginal NG",
+      "NG",
+      "Gross NG"
+    ],
+    "failure_shape_emitted_by_adapter": {
+      "status": "failed",
+      "error": {
+        "code": "MODEL_TIMEOUT"
+      }
+    }
+  },
+  "model_owner_confirmation_required": {
+    "defect_probability": [
+      "Whether this means the calibrated probability of at least one defect in the image",
+      "Value range, calibration method, and behavior for defect-free samples"
+    ],
+    "detection_confidence": "Meaning, scope, and calibration of the per-defect score",
+    "class_confidence": "Meaning, scope, and calibration of the per-defect class score",
+    "severity": "Supported labels and their mapping to the Agent's four labels",
+    "severity_probabilities": "Whether a full four-label distribution is available and whether values sum to one",
+    "severity_confidence": "Definition and relation to the severity probability distribution",
+    "bbox_xyxy": "Coordinate origin, order, units, and image dimensions",
+    "mask_ref": "Availability, format, storage, and authorized access method",
+    "metadata": "Availability and format of model_version, calibration_version, and inference_timestamp",
+    "error": "Native failure response shape, error codes, and timeout behavior"
+  },
+  "real_output_samples_required": [
+    "defect_free",
+    "one_or_multiple_defects",
+    "inference_failure"
+  ],
+  "routing_thresholds": "PROTOTYPE_ONLY_PENDING_REAL_DATA_CALIBRATION"
+}
