@@ -2,39 +2,7 @@
 
 > 设计稿：AgentArts 公测尚未开通，下面是待实现流程。
 
-```mermaid
-flowchart LR
-    U[质检员上传图片或批次] --> D
-
-    subgraph AA[AgentArts 编排层]
-        D[检测 Agent<br/>校验输入并调用检测工具]
-        T[分拣 Agent<br/>读取分级与置信度]
-        R[仲裁 Agent<br/>复查边界样本与证据]
-        X{工具调用成功<br/>且是真实模型结果?}
-        Y{低置信度或<br/>Marginal NG?}
-        Z{高置信度结果}
-        O[汇总建议与调用记录]
-        H[建议人工复检]
-
-        D --> X
-        X -- 是 --> T
-        X -- 否：失败或模拟结果 --> H
-        T --> Y
-        Y -- 是 --> R
-        R --> H
-        Y -- 否 --> Z
-        Z -- Acceptable --> P[建议放行]
-        Z -- NG 或 Gross NG --> F[建议返工]
-        P --> O
-        F --> O
-        H --> O
-    end
-
-    D --> API[(检测推理服务<br/>框、掩码、类别、四档分级、置信度)]
-    API --> D
-    O --> W[工作台展示图像标注、处置建议与 Trace]
-    W --> U
-```
+![毫芒 Agent 工作流程图](05-Agent工作流程图.png)
 
 | Agent | 输入 | 关键动作 | 输出 |
 |---|---|---|---|
