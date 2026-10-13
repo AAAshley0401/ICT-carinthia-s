@@ -11,6 +11,11 @@ import hashlib
 import json
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
+if __package__:
+    from .detector_agent import DetectorAgent
+else:
+    from detector_agent import DetectorAgent
+
 
 SAMPLES = (
     {
@@ -75,7 +80,7 @@ class Handler(BaseHTTPRequestHandler):
             self._json(404, {"error": "not_found"})
 
     def do_POST(self) -> None:
-        if self.path != "/v1/inspect":
+        if self.path not in {"/v1/inspect", "/v1/detector"}:
             self._json(404, {"error": "not_found"})
             return
 
@@ -86,6 +91,16 @@ class Handler(BaseHTTPRequestHandler):
             payload = json.loads(self.rfile.read(length))
             if not isinstance(payload, dict):
                 raise ValueError("JSON body must be an object")
+            if self.path == "/v1/detector":
+                sample_id = payload.get("sample_id")
+                image_path = payload.get("image_path")
+                scenario = payload.get("scenario", "normal")
+                if not isinstance(scenario, str):
+                    raise ValueError("scenario must be a string")
+                detector = DetectorAgent(mode=scenario)
+                response = detector.detect(sample_id, image_path)
+                self._json(200, response)
+                return
             image_url = payload.get("image_url")
             sample_id = payload.get("sample_id")
             if not isinstance(image_url, str) or not image_url.strip():
