@@ -53,7 +53,7 @@ def format_trace(trace: Mapping[str, Any]) -> str:
         lines.append(f"[{step['agent']}]")
         summary = step.get("output_summary", {})
         decision = step.get("decision", {})
-        if step["agent"] == "DetectorAgent":
+        if step["agent"] not in {"ValidationAgent", "RoutingEngine"}:
             lines.append(f"Status: {str(summary.get('status', 'unknown')).upper()}")
             lines.append(f"Defect probability: {summary.get('defect_probability')}")
             lines.append(f"Model version: {summary.get('model_version')}")
@@ -64,7 +64,11 @@ def format_trace(trace: Mapping[str, Any]) -> str:
             if summary.get("reason_code"):
                 lines.append(f"Reason: {summary['reason_code']}")
         elif step["agent"] == "RoutingEngine":
-            lines.append(f"Preview decision: {decision.get('path')}")
+            decision_label = (
+                "Preview decision" if decision.get("decision_scope") == "SIMULATION_PREVIEW"
+                else "Decision"
+            )
+            lines.append(f"{decision_label}: {decision.get('path')}")
             evidence = decision.get("evidence", {})
             if evidence.get("severity_confidence") is not None:
                 lines.append(f"Severity confidence: {evidence['severity_confidence']}")
@@ -78,7 +82,8 @@ def format_trace(trace: Mapping[str, Any]) -> str:
             lines.append(f"Validated decision: {decision.get('validated_path')}")
         lines.append("")
     final = trace["final_decision"]
-    lines.append(f"Final preview: {final['path']} ({final['decision_scope']})")
+    final_label = "Final preview" if final["decision_scope"] == "SIMULATION_PREVIEW" else "Final decision"
+    lines.append(f"{final_label}: {final['path']} ({final['decision_scope']})")
     lines.append(
         f"Human confirmation: {'REQUIRED' if final['human_confirmation_required'] else 'NOT REQUIRED'}"
     )

@@ -9,17 +9,26 @@ from typing import Any
 from src.agent_trace import TraceCollector, format_trace
 from src.detection_validation import validate_detection_result
 from src.detector_agent import DetectorAgent
+from src.model_adapter import DetectorPort
 from src.router_agent import RouterAgent
 from src.task_state import InspectionTask
 
 
-def run_inspection(sample_id: str, image_path: str, scenario: str) -> dict[str, Any]:
+def run_inspection(
+    sample_id: str, image_path: str, scenario: str = "normal", *, detector: DetectorPort | None = None
+) -> dict[str, Any]:
     task = InspectionTask(sample_id)
     trace = TraceCollector(sample_id)
-    detection_result = DetectorAgent(mode=scenario).detect(sample_id, image_path)
+    detector_agent = detector if detector is not None else DetectorAgent(mode=scenario)
+    detector_name = type(detector_agent).__name__
+    detection_result = detector_agent.detect(sample_id, image_path)
     trace.add_step(
-        "DetectorAgent",
-        input_data={"sample_id": sample_id, "image_path": image_path, "scenario": scenario},
+        detector_name,
+        input_data={
+            "sample_id": sample_id,
+            "image_path": image_path,
+            **({"scenario": scenario} if detector is None else {}),
+        },
         output_data={
             "status": detection_result["status"],
             "defect_probability": detection_result["defect_probability"],
@@ -41,6 +50,11 @@ def run_inspection(sample_id: str, image_path: str, scenario: str) -> dict[str, 
         },
     )
     validation = validate_detection_result(detection_result, task.task_id)
+    decision_scope = (
+        "SIMULATION_PREVIEW" if detection_result["demo_only"]
+        else "VALIDATED_MODEL_OUTPUT" if validation.valid
+        else "REJECTED_MODEL_OUTPUT"
+    )
     trace.add_step(
         "ValidationAgent",
         input_data=detection_result,
@@ -65,7 +79,7 @@ def run_inspection(sample_id: str, image_path: str, scenario: str) -> dict[str, 
             "evidence": preview.evidence,
             "validated_path": actual.selected_path.value,
             "validated_reason_codes": list(actual.reason_codes),
-            "decision_scope": "SIMULATION_PREVIEW",
+            "decision_scope": decision_scope,
         },
     )
     final_decision = {
@@ -73,7 +87,7 @@ def run_inspection(sample_id: str, image_path: str, scenario: str) -> dict[str, 
         "reason_codes": list(preview.reason_codes),
         "human_review_required": preview.human_review_required,
         "human_confirmation_required": preview.path.value != "FAILED",
-        "decision_scope": "SIMULATION_PREVIEW",
+        "decision_scope": decision_scope,
         "production_usable": False,
         "validated_path": actual.selected_path.value,
         "validated_reason_codes": list(actual.reason_codes),
@@ -92,7 +106,7 @@ def run_inspection(sample_id: str, image_path: str, scenario: str) -> dict[str, 
         "recommended_action": preview.recommended_action,
         "evidence_summary": preview.evidence_summary,
         "evidence": preview.evidence,
-        "decision_scope": "SIMULATION_PREVIEW",
+        "decision_scope": decision_scope,
         "demo_only": detection_result["demo_only"],
         "production_usable": False,
         "validation_status": validation.status.value,
