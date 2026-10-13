@@ -8,7 +8,7 @@
 |---|---|
 | [`docs/`](docs/) | 项目文档、起跑清单、方案存档及获奖项目调研 |
 | `docs/competition/` | 本地赛事通知与报名表附件，不纳入 Git |
-| [`prototype/`](prototype/) | 可直接用浏览器打开的工作台原型；新版与早期概念稿 |
+| [`prototype/`](prototype/) | 预留界面原型目录；当前原型文件已按阶段清理 |
 | `src/` | 后续放检测与分级模型代码 |
 | [`agentarts/`](agentarts/) | AgentArts 工具接口约定与接入步骤 |
 | `eval/` | 后续放指标计算与消融记录脚本 |
@@ -16,7 +16,7 @@
 | `data/processed/` | 本地预处理数据，不纳入 Git |
 | `runs/` | 本地训练输出与实验记录，不纳入 Git |
 
-从[项目文档](docs/项目文档-明察DefectLens.md)了解完整方案，从[起跑清单](docs/起跑清单-明察DefectLens.md)了解当前分工。当前界面设计位于[prototype/工作台新版.html](prototype/工作台新版.html)。
+从[项目文档](docs/项目文档-明察DefectLens.md)了解完整方案，从[起跑清单](docs/起跑清单-明察DefectLens.md)了解当前分工。界面原型目录目前为空，后续按真实接口重新制作。
 
 等待数据期间可先用 `python src/mock_inference_server.py` 启动本地模拟接口；它不读取图片，也不产生实测结果。接入说明见[agentarts/README.md](agentarts/README.md)。
 
