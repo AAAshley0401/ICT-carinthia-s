@@ -13,7 +13,7 @@ def model_result(**changes):
         "model_version": "prototype-model-v1",
         "grade": "NG",
         "confidence": 0.96,
-        "defects": [],
+        "defects": [{"category": "particle", "severity": "NG", "confidence": 0.97}],
     }
     result.update(changes)
     return result
@@ -38,7 +38,10 @@ class RoutingEngineTests(unittest.TestCase):
     def test_boundary_review(self):
         task = InspectionTask("W-001")
         decision = route_detection(
-            task, model_result(grade="Marginal NG", confidence=0.94)
+            task, model_result(
+                grade="Marginal NG", confidence=0.94,
+                defects=[{"category": "particle", "severity": "Marginal NG", "confidence": 0.94}],
+            )
         )
 
         self.assertEqual(decision.to_dict()["selected_path"], "REVIEW")
@@ -72,6 +75,10 @@ class RoutingEngineTests(unittest.TestCase):
         decision = route_detection(InspectionTask("W-001"), tool_error=TimeoutError())
         self.assertEqual(decision.reason_codes, ("MODEL_TIMEOUT",))
 
+    def test_model_timeout_in_error_response_fails(self):
+        decision = route_detection(InspectionTask("W-001"), {"error": "MODEL_TIMEOUT"})
+        self.assertEqual(decision.reason_codes, ("MODEL_TIMEOUT",))
+
     def test_invalid_response_format_fails(self):
         decision = route_detection(InspectionTask("W-001"), model_result(confidence="high"))
         self.assertEqual(decision.reason_codes, ("INVALID_RESPONSE_FORMAT",))
@@ -82,8 +89,16 @@ class RoutingEngineTests(unittest.TestCase):
         self.assertEqual(decision.reason_codes, ("LOW_CONFIDENCE", "RULE_CONFLICT"))
 
     def test_acceptable_without_screening_score_requires_review(self):
-        decision = route_detection(InspectionTask("W-001"), model_result(grade="Acceptable"))
+        decision = route_detection(InspectionTask("W-001"), model_result(grade="Acceptable", defects=[]))
         self.assertEqual(decision.reason_codes, ("SCREENING_SCORE_MISSING",))
+
+    def test_ng_without_defect_requires_review(self):
+        decision = route_detection(InspectionTask("W-001"), model_result(defects=[]))
+        self.assertEqual(decision.reason_codes, ("GRADE_DEFECT_CONFLICT",))
+
+    def test_malformed_defect_fails(self):
+        decision = route_detection(InspectionTask("W-001"), model_result(defects=["particle"]))
+        self.assertEqual(decision.reason_codes, ("INVALID_RESPONSE_FORMAT",))
 
     def test_state_transition_is_guarded(self):
         task = InspectionTask("W-001")

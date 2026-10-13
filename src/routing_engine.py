@@ -126,6 +126,10 @@ def route_detection(
         reasons.append("SEVERITY_BOUNDARY")
     if result.get("conflict") is True:
         reasons.append("RULE_CONFLICT")
+    if (result["grade"] != "Acceptable" and not result["defects"]) or any(
+        defect["severity"] != result["grade"] for defect in result["defects"]
+    ):
+        reasons.append("GRADE_DEFECT_CONFLICT")
     # A severity confidence alone does not prove an Acceptable image has no defect.
     if result["grade"] == "Acceptable":
         if "screening_confidence" not in result:
@@ -158,8 +162,10 @@ def _fail(task: InspectionTask, code: str) -> RoutingDecision:
 
 
 def _is_timeout(error: object) -> bool:
-    return isinstance(error, TimeoutError) or (
-        isinstance(error, Mapping) and error.get("code") == "MODEL_TIMEOUT"
+    return (
+        isinstance(error, TimeoutError)
+        or error == "MODEL_TIMEOUT"
+        or (isinstance(error, Mapping) and error.get("code") == "MODEL_TIMEOUT")
     )
 
 
@@ -178,6 +184,26 @@ def _valid_format(result: Mapping[str, Any], task_id: str) -> bool:
         return False
     if not isinstance(result["defects"], list):
         return False
+    for defect in result["defects"]:
+        if not isinstance(defect, Mapping):
+            return False
+        if not {"category", "severity", "confidence"} <= defect.keys():
+            return False
+        if not isinstance(defect["category"], str) or not defect["category"].strip():
+            return False
+        if not isinstance(defect["severity"], str) or defect["severity"] not in GRADES:
+            return False
+        if not _is_score(defect["confidence"]):
+            return False
+        bbox = defect.get("bbox_xyxy")
+        if bbox is not None and (
+            not isinstance(bbox, list)
+            or len(bbox) != 4
+            or any(type(value) not in (int, float) or not math.isfinite(value) for value in bbox)
+            or bbox[0] >= bbox[2]
+            or bbox[1] >= bbox[3]
+        ):
+            return False
     if "screening_confidence" in result and not _is_score(result["screening_confidence"]):
         return False
     if "boundary_distance" in result and not _is_score(result["boundary_distance"]):
