@@ -1,0 +1,55 @@
+[
+  {
+    "case_id": "severity_probability_boundary",
+    "sample_id": "R-B001",
+    "set": {
+      "/defects/0/severity": "Marginal NG",
+      "/defects/0/severity_confidence": 0.82,
+      "/defects/0/severity_probabilities": {
+        "Acceptable": 0.05,
+        "Marginal NG": 0.52,
+        "NG": 0.43,
+        "Gross NG": 0.0
+      }
+    },
+    "expected": {
+      "path": "REVIEW",
+      "reason_codes": ["SEVERITY_BOUNDARY"],
+      "state": "REVIEW_REQUIRED",
+      "human_review_required": true
+    }
+  },
+  {
+    "case_id": "low_severity_confidence",
+    "sample_id": "R-B002",
+    "set": {"/defects/0/severity_confidence": 0.65},
+    "expected": {
+      "path": "REVIEW",
+      "reason_codes": ["UNCERTAIN_SEVERITY"],
+      "state": "REVIEW_REQUIRED",
+      "human_review_required": true
+    }
+  },
+  {
+    "case_id": "low_detection_confidence",
+    "sample_id": "R-B003",
+    "set": {"/defects/0/detection_confidence": 0.65},
+    "expected": {
+      "path": "REVIEW",
+      "reason_codes": ["LOW_DETECTION_CONFIDENCE"],
+      "state": "REVIEW_REQUIRED",
+      "human_review_required": true
+    }
+  },
+  {
+    "case_id": "uncertain_defect_type",
+    "sample_id": "R-B004",
+    "set": {"/defects/0/class_confidence": 0.7},
+    "expected": {
+      "path": "REVIEW",
+      "reason_codes": ["UNCERTAIN_DEFECT_TYPE"],
+      "state": "REVIEW_REQUIRED",
+      "human_review_required": true
+    }
+  }
+]

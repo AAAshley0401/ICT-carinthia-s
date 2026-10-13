@@ -1,0 +1,55 @@
+[
+  {
+    "case_id": "model_timeout",
+    "sample_id": "R-F001",
+    "set": {
+      "/status": "failed",
+      "/error": "timeout",
+      "/defect_probability": null,
+      "/defects": []
+    },
+    "expected": {
+      "path": "FAILED",
+      "reason_codes": ["TOOL_ERROR"],
+      "state": "INVALID_RESULT",
+      "human_review_required": true
+    }
+  },
+  {
+    "case_id": "demo_result_blocked",
+    "sample_id": "R-F002",
+    "set": {
+      "/mode": "mock",
+      "/demo_only": true,
+      "/image_analyzed": false
+    },
+    "expected": {
+      "path": "FAILED",
+      "reason_codes": ["DEMO_RESULT"],
+      "state": "INVALID_RESULT",
+      "human_review_required": true
+    }
+  },
+  {
+    "case_id": "missing_severity_probabilities",
+    "sample_id": "R-F003",
+    "remove": ["/defects/0/severity_probabilities"],
+    "expected": {
+      "path": "FAILED",
+      "reason_codes": ["INVALID_SCHEMA"],
+      "state": "INVALID_RESULT",
+      "human_review_required": true
+    }
+  },
+  {
+    "case_id": "invalid_probability_sum",
+    "sample_id": "R-F004",
+    "set": {"/defects/0/severity_probabilities/NG": 0.5},
+    "expected": {
+      "path": "FAILED",
+      "reason_codes": ["INVALID_SCHEMA"],
+      "state": "INVALID_RESULT",
+      "human_review_required": true
+    }
+  }
+]

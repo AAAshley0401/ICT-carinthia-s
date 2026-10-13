@@ -78,6 +78,7 @@ def _failed(code: str) -> EvidenceEvaluation:
         "DEMO_RESULT": "Demo output cannot be used for real production decisions.",
         "TOOL_ERROR": "Detector tool failed; no reliable suggestion is available.",
         "INVALID_SCHEMA": "Detector output does not satisfy the required model contract.",
+        "EVIDENCE_CONFLICT": "Defect probability indicates a possible defect, but no localized defect evidence was returned.",
     }[code]
     return EvidenceEvaluation(
         SelectedPath.FAILED, (code,), explanation, True, None,
@@ -135,8 +136,6 @@ def _evaluate_evidence(result: Mapping[str, Any], policy: RoutingPolicy) -> Evid
 
     reasons: list[str] = []
     defects = result["defects"]
-    if not defects:
-        reasons.append("MISSING_DEFECT_EVIDENCE")
     for defect in defects:
         if defect["detection_confidence"] < policy.detection_threshold:
             reasons.append("LOW_DETECTION_CONFIDENCE")
@@ -178,15 +177,22 @@ def route_detection(
     """Validate one model response, update task state, then route its evidence."""
     if task.state is not TaskState.CREATED:
         raise ValueError("route_detection requires a new CREATED task")
+    policy = policy or RoutingPolicy()
     task.transition_to(TaskState.DETECTING)
     validation = validate_detection_result(result, task.task_id, tool_error=tool_error)
     if validation.status is ValidationStatus.INVALID_RESULT:
         task.transition_to(TaskState.INVALID_RESULT)
         return _decision(task, _failed(validation.reason_code or "INVALID_SCHEMA"))
+    if (
+        result["defect_probability"] >= policy.normal_probability_threshold
+        and not result["defects"]
+    ):
+        task.transition_to(TaskState.INVALID_RESULT)
+        return _decision(task, _failed("EVIDENCE_CONFLICT"))
 
     task.transition_to(TaskState.DETECT_SUCCESS)
     task.transition_to(TaskState.SORTING)
-    evaluation = _evaluate_evidence(result, policy or RoutingPolicy())
+    evaluation = _evaluate_evidence(result, policy)
     task.transition_to(
         TaskState.REVIEW_REQUIRED if evaluation.path is SelectedPath.REVIEW else TaskState.SUGGESTION_READY
     )
@@ -203,4 +209,10 @@ def preview_demo_route(
         return _failed("TOOL_ERROR")
     if not has_valid_shape(result, task_id):
         return _failed("INVALID_SCHEMA")
-    return _evaluate_evidence(result, policy or RoutingPolicy())
+    policy = policy or RoutingPolicy()
+    if (
+        result["defect_probability"] >= policy.normal_probability_threshold
+        and not result["defects"]
+    ):
+        return _failed("EVIDENCE_CONFLICT")
+    return _evaluate_evidence(result, policy)

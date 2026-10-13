@@ -1,0 +1,34 @@
+[
+  {
+    "case_id": "normal_low_defect_probability",
+    "sample_id": "R-N001",
+    "set": {"/defect_probability": 0.05, "/defects": []},
+    "expected": {
+      "path": "NORMAL",
+      "reason_codes": ["LOW_DEFECT_PROBABILITY"],
+      "state": "SUGGESTION_READY",
+      "human_review_required": false
+    }
+  },
+  {
+    "case_id": "reliable_defect_suggestion",
+    "sample_id": "R-N002",
+    "expected": {
+      "path": "SUGGESTION",
+      "reason_codes": ["RELIABLE_DEFECT_EVIDENCE"],
+      "state": "SUGGESTION_READY",
+      "human_review_required": false
+    }
+  },
+  {
+    "case_id": "normal_just_below_threshold",
+    "sample_id": "R-N003",
+    "set": {"/defect_probability": 0.199, "/defects": []},
+    "expected": {
+      "path": "NORMAL",
+      "reason_codes": ["LOW_DEFECT_PROBABILITY"],
+      "state": "SUGGESTION_READY",
+      "human_review_required": false
+    }
+  }
+]

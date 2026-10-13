@@ -1,0 +1,43 @@
+[
+  {
+    "case_id": "high_probability_without_defects",
+    "sample_id": "R-C001",
+    "set": {"/defect_probability": 0.9, "/defects": []},
+    "expected": {
+      "path": "FAILED",
+      "reason_codes": ["EVIDENCE_CONFLICT"],
+      "state": "INVALID_RESULT",
+      "human_review_required": true
+    }
+  },
+  {
+    "case_id": "severity_label_and_boundary_conflict",
+    "sample_id": "R-C002",
+    "set": {
+      "/defects/0/severity_confidence": 0.82,
+      "/defects/0/severity_probabilities": {
+        "Acceptable": 0.01,
+        "Marginal NG": 0.51,
+        "NG": 0.48,
+        "Gross NG": 0.0
+      }
+    },
+    "expected": {
+      "path": "REVIEW",
+      "reason_codes": ["SEVERITY_LABEL_CONFLICT", "SEVERITY_BOUNDARY"],
+      "state": "REVIEW_REQUIRED",
+      "human_review_required": true
+    }
+  },
+  {
+    "case_id": "sample_identity_conflict",
+    "sample_id": "R-C003",
+    "set": {"/sample_id": "another-sample"},
+    "expected": {
+      "path": "FAILED",
+      "reason_codes": ["INVALID_SCHEMA"],
+      "state": "INVALID_RESULT",
+      "human_review_required": true
+    }
+  }
+]

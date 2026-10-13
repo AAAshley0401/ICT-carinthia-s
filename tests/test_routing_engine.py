@@ -118,9 +118,10 @@ class RoutingEngineTests(unittest.TestCase):
         decision = route_detection(InspectionTask("W-001"), result)
         self.assertEqual(decision.reason_codes, ("LOW_DETECTION_CONFIDENCE",))
 
-    def test_possible_defect_without_localization_requires_review(self):
+    def test_possible_defect_without_localization_is_invalid(self):
         decision = route_detection(InspectionTask("W-001"), model_result(defects=[]))
-        self.assertEqual(decision.reason_codes, ("MISSING_DEFECT_EVIDENCE",))
+        self.assertEqual(decision.reason_codes, ("EVIDENCE_CONFLICT",))
+        self.assertEqual(decision.current_state, TaskState.INVALID_RESULT)
 
     def test_state_transition_is_guarded(self):
         with self.assertRaises(ValueError):
