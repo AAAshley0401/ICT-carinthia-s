@@ -65,12 +65,15 @@ def anomaly_map(patches: torch.Tensor, memory: torch.Tensor, device: torch.devic
 
 
 def fit(extractor: FeatureExtractor, root: Path, model_path: Path, *, train_count: int,
-        calibration_count: int, memory_size: int) -> dict:
+        calibration_count: int, memory_size: int, pixel_quantile: float = 0.995,
+        model_version: str = MODEL_VERSION) -> dict:
     normal_images = sorted((root / "train/good").glob("*.png"))
     if len(normal_images) < train_count + calibration_count:
         raise ValueError("not enough train/good images for the selected fit and calibration counts")
     if min(train_count, calibration_count, memory_size) < 1:
         raise ValueError("train_count, calibration_count, and memory_size must be positive")
+    if not 0 < pixel_quantile < 1:
+        raise ValueError("pixel_quantile must be between 0 and 1")
     generator = torch.Generator().manual_seed(42)
     # Both memory and provisional thresholds use normal training images only.
     memory_patches = torch.cat([extractor.patches(path) for path in normal_images[:train_count]])
@@ -80,16 +83,17 @@ def fit(extractor: FeatureExtractor, root: Path, model_path: Path, *, train_coun
         anomaly_map(extractor.patches(path), memory, extractor.device)
         for path in normal_images[train_count:train_count + calibration_count]
     ]
-    pixel_threshold = float(np.quantile(np.concatenate([x.ravel() for x in calibration_maps]), 0.995))
+    pixel_threshold = float(np.quantile(np.concatenate([x.ravel() for x in calibration_maps]), pixel_quantile))
     image_threshold = float(np.quantile([float(x.max()) for x in calibration_maps], 0.95))
     checkpoint = {
-        "model_version": MODEL_VERSION,
+        "model_version": model_version,
         "memory": memory,
         "pixel_threshold": pixel_threshold,
         "image_threshold": image_threshold,
         "train_count": train_count,
         "calibration_count": calibration_count,
         "memory_size": len(memory),
+        "pixel_quantile": pixel_quantile,
         "seed": 42,
         "feature_backbone": "ResNet18 ImageNet1K V1 layer2+layer3",
         "preprocessing": "resize_full_image_256x256_imagenet_normalize",
@@ -170,6 +174,8 @@ def main() -> None:
     parser.add_argument("--train-count", type=int, default=32)
     parser.add_argument("--calibration-count", type=int, default=8)
     parser.add_argument("--memory-size", type=int, default=2048)
+    parser.add_argument("--pixel-quantile", type=float, default=0.995)
+    parser.add_argument("--model-version", default=MODEL_VERSION)
     parser.add_argument("--refit", action="store_true")
     parser.add_argument("images", nargs="*", type=Path)
     args = parser.parse_args()
@@ -179,10 +185,11 @@ def main() -> None:
     if args.refit or not args.model_path.is_file():
         checkpoint = fit(extractor, args.root, args.model_path,
                          train_count=args.train_count, calibration_count=args.calibration_count,
-                         memory_size=args.memory_size)
+                         memory_size=args.memory_size, pixel_quantile=args.pixel_quantile,
+                         model_version=args.model_version)
     else:
         checkpoint = torch.load(args.model_path, map_location="cpu", weights_only=True)
-        if (checkpoint.get("model_version") != MODEL_VERSION or
+        if (checkpoint.get("model_version") != args.model_version or
                 checkpoint.get("preprocessing") != "resize_full_image_256x256_imagenet_normalize"):
             raise ValueError("checkpoint version does not match this baseline")
     images = args.images or [

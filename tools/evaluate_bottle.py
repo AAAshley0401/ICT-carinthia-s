@@ -12,7 +12,7 @@ import numpy as np
 import torch
 from PIL import Image
 
-from bottle_patchcore import DATA_ROOT, MODEL_PATH, MODEL_VERSION, OUTPUT_ROOT, SIZE, FeatureExtractor, infer
+from bottle_patchcore import DATA_ROOT, MODEL_PATH, OUTPUT_ROOT, SIZE, FeatureExtractor, infer
 
 
 def image_auc(positive: list[float], negative: list[float]) -> float:
@@ -24,8 +24,8 @@ def image_auc(positive: list[float], negative: list[float]) -> float:
 
 def evaluate(root: Path, output_root: Path, model_path: Path) -> dict:
     checkpoint = torch.load(model_path, map_location="cpu", weights_only=True)
-    if checkpoint.get("model_version") != MODEL_VERSION:
-        raise ValueError("checkpoint model version mismatch")
+    if not isinstance(checkpoint.get("model_version"), str) or not checkpoint["model_version"]:
+        raise ValueError("checkpoint model version missing")
     if checkpoint.get("preprocessing") != "resize_full_image_256x256_imagenet_normalize":
         raise ValueError("checkpoint preprocessing mismatch")
     torch.set_num_threads(min(torch.get_num_threads(), 8))
@@ -87,6 +87,7 @@ def evaluate(root: Path, output_root: Path, model_path: Path) -> dict:
             "normal_memory_images": checkpoint["train_count"],
             "normal_calibration_images": checkpoint["calibration_count"],
             "memory_patches": checkpoint["memory_size"],
+            "pixel_quantile": checkpoint.get("pixel_quantile", 0.995),
             "seed": checkpoint["seed"],
         },
         "thresholds": {
@@ -114,7 +115,7 @@ def evaluate(root: Path, output_root: Path, model_path: Path) -> dict:
         "mean_inference_ms": float(np.mean([x["inference_ms"] for x in results])),
         "results": results,
     }
-    destination = output_root / "evaluation" / "bottle_baseline_v1.json"
+    destination = output_root / "evaluation" / f"{checkpoint['model_version']}.json"
     destination.parent.mkdir(parents=True, exist_ok=True)
     destination.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
     print(json.dumps({"report": str(destination.resolve()), "samples": len(results),
