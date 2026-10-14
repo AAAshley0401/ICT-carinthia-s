@@ -6,6 +6,7 @@ import argparse
 import hashlib
 import json
 import subprocess
+import uuid
 from collections import Counter
 from datetime import datetime, timezone
 from pathlib import Path
@@ -66,6 +67,9 @@ def evaluate(root: Path, model_path: Path, output_root: Path,
     categories = sorted(path for path in (root / "test").iterdir() if path.is_dir())
     if not any(path.name == "good" for path in categories) or len(categories) < 2:
         raise ValueError("test split needs good and at least one defect category")
+    run_id = uuid.uuid4().hex
+    triage_dir = output_root / "triage" / run_id
+    triage_dir.mkdir(parents=True, exist_ok=False)
     results: list[dict] = []
     for category in categories:
         images = sorted(category.glob("*.png"))
@@ -85,10 +89,9 @@ def evaluate(root: Path, model_path: Path, output_root: Path,
                 "human_review_required": path == "REVIEW",
                 "review_band": {"low_score": low, "high_score": high},
             })
-            result_path = output_root / "json" / f"{result['sample_id']}.json"
-            temporary_path = result_path.with_suffix(".json.tmp")
-            temporary_path.write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
-            temporary_path.replace(result_path)
+            result_path = triage_dir / f"{result['sample_id']}.json"
+            result["triage_result_path"] = str(result_path.resolve())
+            result_path.write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
             results.append(result)
 
     observed = Counter(item["triage_path"] for item in results)
@@ -124,6 +127,7 @@ def evaluate(root: Path, model_path: Path, output_root: Path,
         },
         "checkpoint_sha256": file_sha256(model_path),
         "model_version": checkpoint["model_version"],
+        "triage_run_id": run_id,
         "score_type": "raw_nearest_patch_distance_not_probability",
         "calibration": {
             "normal_memory_images": checkpoint["train_count"],
