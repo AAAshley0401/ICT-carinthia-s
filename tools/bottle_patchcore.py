@@ -1,4 +1,4 @@
-"""Small PatchCore-style nearest-neighbor baseline for MVTec AD bottle."""
+"""Small PatchCore-style nearest-neighbor baseline for an MVTec AD category."""
 
 from __future__ import annotations
 
@@ -87,6 +87,7 @@ def fit(extractor: FeatureExtractor, root: Path, model_path: Path, *, train_coun
     image_threshold = float(np.quantile([float(x.max()) for x in calibration_maps], 0.95))
     checkpoint = {
         "model_version": model_version,
+        "dataset_category": root.name,
         "memory": memory,
         "pixel_threshold": pixel_threshold,
         "image_threshold": image_threshold,
@@ -110,10 +111,12 @@ def infer(extractor: FeatureExtractor, checkpoint: dict, image_path: Path,
     if not image_path.is_file():
         raise FileNotFoundError(image_path)
     relative = image_path.resolve().relative_to(root.resolve())
-    categories = {"good", "broken_large", "broken_small", "contamination"}
-    if len(relative.parts) != 3 or relative.parts[0] != "test" or relative.parts[1] not in categories:
-        raise ValueError("image must be in a supported bottle/test category")
-    sample_id = f"bottle_{relative.parts[1]}_{image_path.stem}"
+    if checkpoint.get("dataset_category", "bottle") != root.name:
+        raise ValueError("checkpoint category does not match dataset root")
+    if (len(relative.parts) != 3 or relative.parts[0] != "test"
+            or not (root / "test" / relative.parts[1]).is_dir()):
+        raise ValueError("image must be in a test subdirectory of the dataset category")
+    sample_id = f"{root.name}_{relative.parts[1]}_{image_path.stem}"
     score_map = anomaly_map(extractor.patches(image_path), checkpoint["memory"], extractor.device)
     anomaly_score = float(score_map.max())
     binary_mask = (score_map > checkpoint["pixel_threshold"]).astype(np.uint8) * 255
@@ -192,9 +195,11 @@ def main() -> None:
         if (checkpoint.get("model_version") != args.model_version or
                 checkpoint.get("preprocessing") != "resize_full_image_256x256_imagenet_normalize"):
             raise ValueError("checkpoint version does not match this baseline")
+    defect_dirs = sorted(path for path in (args.root / "test").iterdir()
+                         if path.is_dir() and path.name != "good")
     images = args.images or [
-        args.root / "test/good/000.png",
-        args.root / "test/broken_large/000.png",
+        next(iter(sorted((args.root / "test/good").glob("*.png")))),
+        next(iter(sorted(defect_dirs[0].glob("*.png")))),
     ]
     for path in images:
         try:
@@ -206,7 +211,7 @@ def main() -> None:
                 "status": "failed",
                 "anomaly_score": None,
                 "predicted_mask": None,
-                "model_version": MODEL_VERSION,
+                "model_version": checkpoint["model_version"],
                 "error": {"code": "IMAGE_NOT_FOUND" if isinstance(exc, FileNotFoundError)
                           else "INVALID_IMAGE", "message": str(exc)},
             }

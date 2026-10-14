@@ -1,4 +1,4 @@
-"""Evaluate the frozen bottle baseline on the complete MVTec AD bottle/test split."""
+"""Evaluate a frozen baseline on an MVTec AD category's complete test split."""
 
 from __future__ import annotations
 
@@ -28,10 +28,15 @@ def evaluate(root: Path, output_root: Path, model_path: Path) -> dict:
         raise ValueError("checkpoint model version missing")
     if checkpoint.get("preprocessing") != "resize_full_image_256x256_imagenet_normalize":
         raise ValueError("checkpoint preprocessing mismatch")
+    if checkpoint.get("dataset_category", "bottle") != root.name:
+        raise ValueError("checkpoint category does not match dataset root")
     torch.set_num_threads(min(torch.get_num_threads(), 8))
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     extractor = FeatureExtractor(device)
-    categories = ("good", "broken_large", "broken_small", "contamination")
+    categories = ("good", *sorted(path.name for path in (root / "test").iterdir()
+                                   if path.is_dir() and path.name != "good"))
+    if len(categories) < 2:
+        raise ValueError("test split must contain good and at least one defect category")
     results: list[dict] = []
     for category in categories:
         paths = sorted((root / "test" / category).glob("*.png"))
@@ -76,7 +81,7 @@ def evaluate(root: Path, output_root: Path, model_path: Path) -> dict:
         commit = None
     report = {
         "dataset": "MVTec AD",
-        "category": "bottle",
+        "category": root.name,
         "split": "official test",
         "dataset_license": "CC BY-NC-SA 4.0",
         "evaluated_at_utc": datetime.now(timezone.utc).isoformat(),
