@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 from pathlib import Path
 
 import numpy as np
@@ -33,6 +34,7 @@ def fit_fixed(extractor: FeatureExtractor, root: Path, model_path: Path, *,
     pixel_threshold = float(np.quantile(np.concatenate([item.ravel() for item in maps]),
                                         pixel_quantile))
     image_threshold = float(np.quantile([float(item.max()) for item in maps], 0.95))
+    transform_manifest = root / "orientation_manifest.json"
     checkpoint = {
         "model_version": f"{root.name}-patchcore-fixed-calibration-v1",
         "dataset_category": root.name,
@@ -51,6 +53,9 @@ def fit_fixed(extractor: FeatureExtractor, root: Path, model_path: Path, *,
         "preprocessing": "resize_full_image_256x256_imagenet_normalize",
         "threshold_status": "PROVISIONAL_TRAIN_NORMAL_ONLY",
     }
+    if transform_manifest.is_file():
+        checkpoint["input_transform_manifest_sha256"] = hashlib.sha256(
+            transform_manifest.read_bytes()).hexdigest()
     model_path.parent.mkdir(parents=True, exist_ok=True)
     torch.save(checkpoint, model_path)
     return checkpoint

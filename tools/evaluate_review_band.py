@@ -66,6 +66,11 @@ def evaluate(root: Path, model_path: Path, output_root: Path,
         raise ValueError("checkpoint category does not match dataset root")
     if checkpoint.get("preprocessing") != "resize_full_image_256x256_imagenet_normalize":
         raise ValueError("unsupported checkpoint preprocessing")
+    expected_transform_hash = checkpoint.get("input_transform_manifest_sha256")
+    if expected_transform_hash is not None:
+        manifest = root / "orientation_manifest.json"
+        if not manifest.is_file() or file_sha256(manifest) != expected_transform_hash:
+            raise ValueError("input transform manifest differs from checkpoint")
     if expected_image_calibration_count is not None and (
         checkpoint.get("image_calibration_count") != expected_image_calibration_count
     ):
@@ -149,6 +154,7 @@ def evaluate(root: Path, model_path: Path, output_root: Path,
             "fit_fixed_calibration.py": file_sha256(Path(__file__).with_name("fit_fixed_calibration.py")),
         },
         "checkpoint_sha256": file_sha256(model_path),
+        "input_transform_manifest_sha256": checkpoint.get("input_transform_manifest_sha256"),
         "model_version": checkpoint["model_version"],
         "triage_run_id": run_id,
         "decision_scope": "EXPLORATORY_PUBLIC_DATA",

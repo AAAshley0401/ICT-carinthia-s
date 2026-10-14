@@ -47,6 +47,11 @@ def audit(root: Path, checkpoint_path: Path, output_path: Path) -> dict:
         raise ValueError("checkpoint category does not match dataset root")
     if checkpoint.get("preprocessing") != "resize_full_image_256x256_imagenet_normalize":
         raise ValueError("unsupported checkpoint preprocessing")
+    expected_transform_hash = checkpoint.get("input_transform_manifest_sha256")
+    if expected_transform_hash is not None:
+        manifest = root / "orientation_manifest.json"
+        if not manifest.is_file() or sha256(manifest) != expected_transform_hash:
+            raise ValueError("input transform manifest differs from checkpoint")
     torch.set_num_threads(min(torch.get_num_threads(), 8))
     extractor = FeatureExtractor(torch.device("cuda" if torch.cuda.is_available() else "cpu"))
     rows = []
@@ -92,6 +97,7 @@ def audit(root: Path, checkpoint_path: Path, output_path: Path) -> dict:
         "category": root.name,
         "checkpoint": str(checkpoint_path.resolve()),
         "checkpoint_sha256": sha256(checkpoint_path),
+        "input_transform_manifest_sha256": checkpoint.get("input_transform_manifest_sha256"),
         "source_sha256": sha256(Path(__file__)),
         "pixel_threshold": checkpoint["pixel_threshold"],
         "decision_scope": "EXPLORATORY_PUBLIC_DATA",
