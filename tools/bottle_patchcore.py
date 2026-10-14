@@ -66,12 +66,14 @@ def anomaly_map(patches: torch.Tensor, memory: torch.Tensor, device: torch.devic
 
 def fit(extractor: FeatureExtractor, root: Path, model_path: Path, *, train_count: int,
         calibration_count: int, memory_size: int, pixel_quantile: float = 0.995,
-        model_version: str = MODEL_VERSION) -> dict:
+        model_version: str = MODEL_VERSION, image_calibration_count: int | None = None) -> dict:
     normal_images = sorted((root / "train/good").glob("*.png"))
-    if len(normal_images) < train_count + calibration_count:
+    if image_calibration_count is None:
+        image_calibration_count = calibration_count
+    if len(normal_images) < train_count + max(calibration_count, image_calibration_count):
         raise ValueError("not enough train/good images for the selected fit and calibration counts")
-    if min(train_count, calibration_count, memory_size) < 1:
-        raise ValueError("train_count, calibration_count, and memory_size must be positive")
+    if min(train_count, calibration_count, image_calibration_count, memory_size) < 1:
+        raise ValueError("fit and calibration counts and memory_size must be positive")
     if not 0 < pixel_quantile < 1:
         raise ValueError("pixel_quantile must be between 0 and 1")
     generator = torch.Generator().manual_seed(42)
@@ -81,10 +83,14 @@ def fit(extractor: FeatureExtractor, root: Path, model_path: Path, *, train_coun
     memory = memory_patches[chosen].contiguous()
     calibration_maps = [
         anomaly_map(extractor.patches(path), memory, extractor.device)
-        for path in normal_images[train_count:train_count + calibration_count]
+        for path in normal_images[train_count:train_count + max(calibration_count, image_calibration_count)]
     ]
-    pixel_threshold = float(np.quantile(np.concatenate([x.ravel() for x in calibration_maps]), pixel_quantile))
-    image_threshold = float(np.quantile([float(x.max()) for x in calibration_maps], 0.95))
+    pixel_threshold = float(np.quantile(
+        np.concatenate([x.ravel() for x in calibration_maps[:calibration_count]]), pixel_quantile
+    ))
+    image_threshold = float(np.quantile(
+        [float(x.max()) for x in calibration_maps[:image_calibration_count]], 0.95
+    ))
     checkpoint = {
         "model_version": model_version,
         "dataset_category": root.name,
@@ -93,6 +99,7 @@ def fit(extractor: FeatureExtractor, root: Path, model_path: Path, *, train_coun
         "image_threshold": image_threshold,
         "train_count": train_count,
         "calibration_count": calibration_count,
+        "image_calibration_count": image_calibration_count,
         "memory_size": len(memory),
         "pixel_quantile": pixel_quantile,
         "seed": 42,
@@ -176,6 +183,7 @@ def main() -> None:
     parser.add_argument("--model-path", type=Path, default=MODEL_PATH)
     parser.add_argument("--train-count", type=int, default=32)
     parser.add_argument("--calibration-count", type=int, default=8)
+    parser.add_argument("--image-calibration-count", type=int)
     parser.add_argument("--memory-size", type=int, default=2048)
     parser.add_argument("--pixel-quantile", type=float, default=0.995)
     parser.add_argument("--model-version", default=MODEL_VERSION)
@@ -189,7 +197,8 @@ def main() -> None:
         checkpoint = fit(extractor, args.root, args.model_path,
                          train_count=args.train_count, calibration_count=args.calibration_count,
                          memory_size=args.memory_size, pixel_quantile=args.pixel_quantile,
-                         model_version=args.model_version)
+                         model_version=args.model_version,
+                         image_calibration_count=args.image_calibration_count)
     else:
         checkpoint = torch.load(args.model_path, map_location="cpu", weights_only=True)
         if (checkpoint.get("model_version") != args.model_version or

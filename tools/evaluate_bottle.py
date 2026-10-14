@@ -91,6 +91,9 @@ def evaluate(root: Path, output_root: Path, model_path: Path) -> dict:
         "training": {
             "normal_memory_images": checkpoint["train_count"],
             "normal_calibration_images": checkpoint["calibration_count"],
+            "normal_image_calibration_images": checkpoint.get(
+                "image_calibration_count", checkpoint["calibration_count"]
+            ),
             "memory_patches": checkpoint["memory_size"],
             "pixel_quantile": checkpoint.get("pixel_quantile", 0.995),
             "seed": checkpoint["seed"],
