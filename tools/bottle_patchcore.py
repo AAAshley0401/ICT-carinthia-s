@@ -106,8 +106,9 @@ def infer(extractor: FeatureExtractor, checkpoint: dict, image_path: Path,
     if not image_path.is_file():
         raise FileNotFoundError(image_path)
     relative = image_path.resolve().relative_to(root.resolve())
-    if relative.parts[:2] not in (("test", "good"), ("test", "broken_large")):
-        raise ValueError("single-image inference accepts bottle/test/good or bottle/test/broken_large")
+    categories = {"good", "broken_large", "broken_small", "contamination"}
+    if len(relative.parts) != 3 or relative.parts[0] != "test" or relative.parts[1] not in categories:
+        raise ValueError("image must be in a supported bottle/test category")
     sample_id = f"bottle_{relative.parts[1]}_{image_path.stem}"
     score_map = anomaly_map(extractor.patches(image_path), checkpoint["memory"], extractor.device)
     anomaly_score = float(score_map.max())
