@@ -204,6 +204,10 @@ def main() -> None:
         if (checkpoint.get("model_version") != args.model_version or
                 checkpoint.get("preprocessing") != "resize_full_image_256x256_imagenet_normalize"):
             raise ValueError("checkpoint version does not match this baseline")
+        if (args.image_calibration_count is not None and
+                checkpoint.get("image_calibration_count", checkpoint["calibration_count"])
+                != args.image_calibration_count):
+            raise ValueError("image calibration count differs from checkpoint; use --refit")
     defect_dirs = sorted(path for path in (args.root / "test").iterdir()
                          if path.is_dir() and path.name != "good")
     images = args.images or [
