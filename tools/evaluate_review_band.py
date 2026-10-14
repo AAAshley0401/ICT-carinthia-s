@@ -15,6 +15,7 @@ import numpy as np
 import torch
 
 from bottle_patchcore import DATA_ROOT, FeatureExtractor, anomaly_map, infer
+from feature_extractor_50 import RESNET18_NAME, build_extractor
 
 
 def file_sha256(path: Path) -> str:
@@ -77,7 +78,7 @@ def evaluate(root: Path, model_path: Path, output_root: Path,
         raise ValueError("image calibration count differs from checkpoint; refit first")
     torch.set_num_threads(min(torch.get_num_threads(), 8))
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    extractor = FeatureExtractor(device)
+    extractor = build_extractor(checkpoint.get("feature_backbone", RESNET18_NAME), device)
     low, high = thresholds_from_normal_training(
         extractor, checkpoint, root, low_quantile, high_quantile
     )
@@ -156,6 +157,7 @@ def evaluate(root: Path, model_path: Path, output_root: Path,
         "checkpoint_sha256": file_sha256(model_path),
         "input_transform_manifest_sha256": checkpoint.get("input_transform_manifest_sha256"),
         "model_version": checkpoint["model_version"],
+        "feature_backbone": checkpoint.get("feature_backbone", RESNET18_NAME),
         "triage_run_id": run_id,
         "decision_scope": "EXPLORATORY_PUBLIC_DATA",
         "production_usable": False,

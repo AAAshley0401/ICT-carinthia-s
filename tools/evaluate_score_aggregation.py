@@ -13,6 +13,7 @@ import numpy as np
 import torch
 
 from bottle_patchcore import FeatureExtractor, anomaly_map
+from feature_extractor_50 import RESNET18_NAME, build_extractor
 
 
 METHODS = ("max", "top_0.1pct", "top_1pct", "top_5pct")
@@ -55,6 +56,11 @@ def evaluate(root: Path, checkpoint_path: Path, output_path: Path,
         raise ValueError("checkpoint category does not match dataset root")
     if checkpoint.get("preprocessing") != "resize_full_image_256x256_imagenet_normalize":
         raise ValueError("unsupported checkpoint preprocessing")
+    expected_transform_hash = checkpoint.get("input_transform_manifest_sha256")
+    if expected_transform_hash is not None:
+        manifest = root / "orientation_manifest.json"
+        if not manifest.is_file() or sha256(manifest) != expected_transform_hash:
+            raise ValueError("input transform manifest differs from checkpoint")
     names = checkpoint.get("calibration_images")
     memory_names = checkpoint.get("memory_images")
     if not isinstance(names, list) or not isinstance(memory_names, list):
@@ -69,7 +75,8 @@ def evaluate(root: Path, checkpoint_path: Path, output_path: Path,
         raise ValueError("calibration image missing or invalid")
 
     torch.set_num_threads(min(torch.get_num_threads(), 8))
-    extractor = FeatureExtractor(torch.device("cuda" if torch.cuda.is_available() else "cpu"))
+    extractor = build_extractor(checkpoint.get("feature_backbone", RESNET18_NAME),
+                                torch.device("cuda" if torch.cuda.is_available() else "cpu"))
 
     def score(path: Path) -> dict[str, float]:
         return image_scores(anomaly_map(extractor.patches(path), checkpoint["memory"],
@@ -126,6 +133,8 @@ def evaluate(root: Path, checkpoint_path: Path, output_path: Path,
         "split": "official test",
         "evaluated_at_utc": datetime.now(timezone.utc).isoformat(),
         "checkpoint_sha256": sha256(checkpoint_path),
+        "feature_backbone": checkpoint.get("feature_backbone", RESNET18_NAME),
+        "input_transform_manifest_sha256": expected_transform_hash,
         "source_sha256": sha256(Path(__file__)),
         "memory_images": len(memory_names),
         "calibration_images": names,

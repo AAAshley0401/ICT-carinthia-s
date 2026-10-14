@@ -13,6 +13,7 @@ import torch
 from PIL import Image
 
 from bottle_patchcore import SIZE, FeatureExtractor, anomaly_map
+from feature_extractor_50 import RESNET18_NAME, build_extractor
 
 
 def sha256(path: Path) -> str:
@@ -53,7 +54,8 @@ def audit(root: Path, checkpoint_path: Path, output_path: Path) -> dict:
         if not manifest.is_file() or sha256(manifest) != expected_transform_hash:
             raise ValueError("input transform manifest differs from checkpoint")
     torch.set_num_threads(min(torch.get_num_threads(), 8))
-    extractor = FeatureExtractor(torch.device("cuda" if torch.cuda.is_available() else "cpu"))
+    extractor = build_extractor(checkpoint.get("feature_backbone", RESNET18_NAME),
+                                torch.device("cuda" if torch.cuda.is_available() else "cpu"))
     rows = []
     for category in sorted((root / "test").iterdir()):
         if not category.is_dir() or category.name == "good":
@@ -97,6 +99,7 @@ def audit(root: Path, checkpoint_path: Path, output_path: Path) -> dict:
         "category": root.name,
         "checkpoint": str(checkpoint_path.resolve()),
         "checkpoint_sha256": sha256(checkpoint_path),
+        "feature_backbone": checkpoint.get("feature_backbone", RESNET18_NAME),
         "input_transform_manifest_sha256": checkpoint.get("input_transform_manifest_sha256"),
         "source_sha256": sha256(Path(__file__)),
         "pixel_threshold": checkpoint["pixel_threshold"],

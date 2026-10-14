@@ -10,6 +10,7 @@ import numpy as np
 import torch
 
 from bottle_patchcore import FeatureExtractor, anomaly_map
+from feature_extractor_50 import RESNET18_NAME, RESNET50_NAME, build_extractor
 
 
 def select_images(root: Path, train_count: int, calibration_count: int) -> tuple[list[Path], list[Path]]:
@@ -36,7 +37,9 @@ def fit_fixed(extractor: FeatureExtractor, root: Path, model_path: Path, *,
     image_threshold = float(np.quantile([float(item.max()) for item in maps], 0.95))
     transform_manifest = root / "orientation_manifest.json"
     checkpoint = {
-        "model_version": f"{root.name}-patchcore-fixed-calibration-v1",
+        "model_version": (f"{root.name}-patchcore-fixed-calibration-v1" +
+                          ("-resnet50" if getattr(extractor, "feature_backbone", RESNET18_NAME)
+                           == RESNET50_NAME else "")),
         "dataset_category": root.name,
         "memory": memory,
         "pixel_threshold": pixel_threshold,
@@ -49,7 +52,7 @@ def fit_fixed(extractor: FeatureExtractor, root: Path, model_path: Path, *,
         "seed": seed,
         "memory_images": [path.name for path in memory_images],
         "calibration_images": [path.name for path in calibration_images],
-        "feature_backbone": "ResNet18 ImageNet1K V1 layer2+layer3",
+        "feature_backbone": getattr(extractor, "feature_backbone", RESNET18_NAME),
         "preprocessing": "resize_full_image_256x256_imagenet_normalize",
         "threshold_status": "PROVISIONAL_TRAIN_NORMAL_ONLY",
     }
@@ -68,9 +71,12 @@ def main() -> None:
     parser.add_argument("--train-count", type=int, required=True)
     parser.add_argument("--calibration-count", type=int, default=64)
     parser.add_argument("--memory-size", type=int, default=2048)
+    parser.add_argument("--backbone", choices=("resnet18", "resnet50"), default="resnet18")
     args = parser.parse_args()
     torch.set_num_threads(min(torch.get_num_threads(), 8))
-    extractor = FeatureExtractor(torch.device("cuda" if torch.cuda.is_available() else "cpu"))
+    backbone = RESNET18_NAME if args.backbone == "resnet18" else RESNET50_NAME
+    extractor = build_extractor(backbone,
+                                torch.device("cuda" if torch.cuda.is_available() else "cpu"))
     checkpoint = fit_fixed(extractor, args.root, args.model_path,
                            train_count=args.train_count,
                            calibration_count=args.calibration_count,
