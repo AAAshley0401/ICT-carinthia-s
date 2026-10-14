@@ -34,7 +34,19 @@ def thresholds_from_normal_training(
     train_count = checkpoint["train_count"]
     count = checkpoint["image_calibration_count"]
     normal_images = sorted((root / "train/good").glob("*.png"))
-    selected = normal_images[train_count:train_count + count]
+    if "calibration_images" in checkpoint:
+        names = checkpoint["calibration_images"]
+        available_names = {path.name for path in normal_images}
+        if (len(names) != count or len(set(names)) != count
+                or any(not isinstance(name, str) or Path(name).name != name or
+                       name not in available_names for name in names)):
+            raise ValueError("invalid checkpoint calibration image list")
+        selected = [root / "train/good" / name for name in names]
+        memory_names = set(checkpoint.get("memory_images", []))
+        if memory_names.intersection(names):
+            raise ValueError("memory and calibration images overlap")
+    else:
+        selected = normal_images[train_count:train_count + count]
     if len(selected) != count:
         raise ValueError("checkpoint requires more normal calibration images than available")
     scores = [float(anomaly_map(extractor.patches(path), checkpoint["memory"], extractor.device).max())
@@ -112,6 +124,13 @@ def evaluate(root: Path, model_path: Path, output_root: Path,
                                 for item in results)
     baseline_false_anomaly = sum(not item["actual_anomaly"] and item["is_anomaly"]
                                  for item in results)
+    defect_scores = np.array([item["anomaly_score"] for item in results
+                              if item["actual_anomaly"]])
+    normal_scores = np.array([item["anomaly_score"] for item in results
+                              if not item["actual_anomaly"]])
+    comparisons = defect_scores[:, None] - normal_scores
+    image_auroc = float((np.count_nonzero(comparisons > 0) +
+                         0.5 * np.count_nonzero(comparisons == 0)) / comparisons.size)
     try:
         commit = subprocess.check_output(["git", "rev-parse", "HEAD"], text=True,
                                          cwd=Path(__file__).resolve().parents[1],
@@ -127,6 +146,7 @@ def evaluate(root: Path, model_path: Path, output_root: Path,
         "source_sha256": {
             "bottle_patchcore.py": file_sha256(Path(__file__).with_name("bottle_patchcore.py")),
             "evaluate_review_band.py": file_sha256(Path(__file__)),
+            "fit_fixed_calibration.py": file_sha256(Path(__file__).with_name("fit_fixed_calibration.py")),
         },
         "checkpoint_sha256": file_sha256(model_path),
         "model_version": checkpoint["model_version"],
@@ -138,6 +158,8 @@ def evaluate(root: Path, model_path: Path, output_root: Path,
         "calibration": {
             "normal_memory_images": checkpoint["train_count"],
             "normal_image_calibration_images": checkpoint["image_calibration_count"],
+            "memory_image_files": checkpoint.get("memory_images"),
+            "calibration_image_files": checkpoint.get("calibration_images"),
             "low_quantile": low_quantile,
             "high_quantile": high_quantile,
             "low_score": low,
@@ -145,6 +167,7 @@ def evaluate(root: Path, model_path: Path, output_root: Path,
             "source": "normal training images only",
         },
         "sample_count": len(results),
+        "image_auroc": image_auroc,
         "path_counts": dict(counts),
         "review_fraction": counts["REVIEW"] / len(results),
         "false_normal_candidates": false_normal,
@@ -163,7 +186,7 @@ def evaluate(root: Path, model_path: Path, output_root: Path,
     destination.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
     print(json.dumps({"report": str(destination.resolve()),
                       **{key: report[key] for key in (
-                          "sample_count", "path_counts", "review_fraction",
+                          "sample_count", "image_auroc", "path_counts", "review_fraction",
                           "false_normal_candidates", "false_anomaly_candidates",
                           "review_defects", "review_normals", "forced_single_threshold"
                       )}}, ensure_ascii=False, indent=2))
