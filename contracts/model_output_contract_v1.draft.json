@@ -1,6 +1,14 @@
 {
   "contract_version": "1.0",
-  "status": "PENDING_MODEL_OWNER_CONFIRMATION",
+  "status": "BLOCKED_BY_MISSING_FOUR_GRADE_LABELS_AND_TARGET_DOMAIN_DATA",
+  "available_dataset_audit": "docs/08-MVTec数据标注审计.md",
+  "available_dataset": {
+    "name": "MVTec AD",
+    "path": "data/raw/mvtec_anomaly_detection",
+    "annotation_types": ["image-level normal/anomaly via directories", "pixel-level anomaly masks"],
+    "four_grade_severity_labels_available": false,
+    "target_wafer_domain": false
+  },
   "scope": "Current Agent output requirements and facts needed to map a real model through ModelAdapter; this is not a frozen production contract.",
   "agent_schema": {
     "schema_version": "1.0",

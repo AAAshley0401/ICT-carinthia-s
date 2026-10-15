@@ -1,0 +1,136 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hairline.local/contracts/demo-view/1.0",
+  "title": "AgentCaseResult v1 Demo",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["contract_version", "sample_id", "provenance", "image", "detection", "validation", "routing", "trace"],
+  "properties": {
+    "contract_version": {"const": "1.0"},
+    "sample_id": {"type": "string", "minLength": 1},
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source_kind", "demo_only", "image_analyzed", "decision_scope", "production_usable"],
+      "properties": {
+        "source_kind": {"enum": ["LOCAL_WORKFLOW", "SYNTHETIC_REPLAY"]},
+        "demo_only": {"const": true},
+        "image_analyzed": {"type": "boolean"},
+        "decision_scope": {"enum": ["SIMULATION_PREVIEW", "SYNTHETIC_REPLAY"]},
+        "production_usable": {"const": false}
+      }
+    },
+    "image": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ref", "width", "height", "evidence_bound"],
+      "properties": {
+        "ref": {"type": ["string", "null"]},
+        "width": {"type": ["integer", "null"], "minimum": 1},
+        "height": {"type": ["integer", "null"], "minimum": 1},
+        "evidence_bound": {"type": "boolean"}
+      }
+    },
+    "detection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "model_version", "calibration_version", "defect_probability", "defects", "error_code"],
+      "properties": {
+        "status": {"enum": ["success", "failed"]},
+        "model_version": {"type": ["string", "null"]},
+        "calibration_version": {"type": ["string", "null"]},
+        "defect_probability": {"$ref": "#/$defs/nullableScore"},
+        "defects": {"type": "array", "items": {"$ref": "#/$defs/defect"}},
+        "error_code": {"type": ["string", "null"]}
+      }
+    },
+    "validation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "reason_code"],
+      "properties": {
+        "status": {"enum": ["VALID", "INVALID_RESULT"]},
+        "reason_code": {"type": ["string", "null"]}
+      }
+    },
+    "routing": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "reason_codes", "human_review_required", "recommended_action", "preview"],
+      "properties": {
+        "path": {"$ref": "#/$defs/path"},
+        "reason_codes": {"$ref": "#/$defs/reasonCodes"},
+        "human_review_required": {"type": "boolean"},
+        "recommended_action": {"type": ["string", "null"]},
+        "preview": {
+          "anyOf": [
+            {"type": "null"},
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["path", "reason_codes", "human_review_required", "explanation"],
+              "properties": {
+                "path": {"$ref": "#/$defs/path"},
+                "reason_codes": {"$ref": "#/$defs/reasonCodes"},
+                "human_review_required": {"type": "boolean"},
+                "explanation": {"type": "string"}
+              }
+            }
+          ]
+        }
+      }
+    },
+    "trace": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["stage", "label", "input_summary", "output_summary", "reason_codes"],
+        "properties": {
+          "stage": {"enum": ["DETECTION", "VALIDATION", "ROUTING"]},
+          "label": {"type": "string", "minLength": 1},
+          "input_summary": {"type": "object"},
+          "output_summary": {"type": "object"},
+          "reason_codes": {"$ref": "#/$defs/reasonCodes"}
+        }
+      }
+    }
+  },
+  "$defs": {
+    "path": {"enum": ["NORMAL", "SUGGESTION", "REVIEW", "FAILED"]},
+    "score": {"type": "number", "minimum": 0, "maximum": 1},
+    "nullableScore": {"anyOf": [{"$ref": "#/$defs/score"}, {"type": "null"}]},
+    "reasonCodes": {"type": "array", "items": {"type": "string", "minLength": 1}},
+    "defect": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["defect_id", "defect_type", "detection_confidence", "class_confidence", "severity", "severity_confidence", "severity_probabilities", "bbox_xyxy", "mask_ref"],
+      "properties": {
+        "defect_id": {"type": "string", "minLength": 1},
+        "defect_type": {"type": "string", "minLength": 1},
+        "detection_confidence": {"$ref": "#/$defs/score"},
+        "class_confidence": {"$ref": "#/$defs/score"},
+        "severity": {"enum": ["Acceptable", "Marginal NG", "NG", "Gross NG"]},
+        "severity_confidence": {"$ref": "#/$defs/score"},
+        "severity_probabilities": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["Acceptable", "Marginal NG", "NG", "Gross NG"],
+          "properties": {
+            "Acceptable": {"$ref": "#/$defs/score"},
+            "Marginal NG": {"$ref": "#/$defs/score"},
+            "NG": {"$ref": "#/$defs/score"},
+            "Gross NG": {"$ref": "#/$defs/score"}
+          }
+        },
+        "bbox_xyxy": {
+          "anyOf": [
+            {"type": "null"},
+            {"type": "array", "prefixItems": [{"type": "number"}, {"type": "number"}, {"type": "number"}, {"type": "number"}], "items": false, "minItems": 4, "maxItems": 4}
+          ]
+        },
+        "mask_ref": {"type": ["string", "null"]}
+      }
+    }
+  }
+}

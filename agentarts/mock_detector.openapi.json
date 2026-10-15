@@ -1,0 +1,96 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Hairline local mock detector",
+    "version": "1.0.0",
+    "description": "Local interface draft for AgentArts tool mapping. The service does not read or analyze images. Platform import and cloud access are not verified."
+  },
+  "servers": [{"url": "http://127.0.0.1:8000", "description": "Local development only; unreachable from AgentArts cloud"}],
+  "paths": {
+    "/v1/inspect": {
+      "post": {
+        "operationId": "inspectMockImage",
+        "summary": "Return a fixed mock Detector result",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["image_url"],
+                "properties": {
+                  "image_url": {"type": "string", "minLength": 1, "description": "Reference string only; never fetched by this mock"},
+                  "sample_id": {"type": "string", "minLength": 1},
+                  "scenario": {"type": "string", "enum": ["normal", "boundary", "failure"], "default": "normal"}
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Mock detector result; success or simulated failure",
+            "content": {"application/json": {"schema": {"$ref": "#/components/schemas/DetectorResult"}}}
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {"application/json": {"schema": {"$ref": "#/components/schemas/RequestError"}}}
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "RequestError": {
+        "type": "object",
+        "required": ["error", "message"],
+        "properties": {"error": {"type": "string"}, "message": {"type": "string"}}
+      },
+      "DetectorResult": {
+        "type": "object",
+        "required": ["schema_version", "sample_id", "status", "mode", "demo_only", "image_analyzed", "model_version", "calibration_version", "inference_timestamp", "defect_probability", "defects", "error"],
+        "properties": {
+          "schema_version": {"type": "string", "enum": ["1.0"]},
+          "sample_id": {"type": "string"},
+          "status": {"type": "string", "enum": ["success", "failed"]},
+          "mode": {"type": "string", "enum": ["mock"]},
+          "demo_only": {"type": "boolean", "enum": [true]},
+          "image_analyzed": {"type": "boolean", "enum": [false]},
+          "model_version": {"type": "string"},
+          "calibration_version": {"type": "string"},
+          "inference_timestamp": {"type": "string", "format": "date-time"},
+          "defect_probability": {"type": "number", "minimum": 0, "maximum": 1, "nullable": true},
+          "defects": {"type": "array", "items": {"$ref": "#/components/schemas/MockDefect"}},
+          "error": {"type": "string", "nullable": true}
+        }
+      },
+      "MockDefect": {
+        "type": "object",
+        "required": ["defect_id", "defect_type", "detection_confidence", "class_confidence", "severity", "severity_confidence", "severity_probabilities", "bbox_xyxy", "mask_ref"],
+        "properties": {
+          "defect_id": {"type": "string"},
+          "defect_type": {"type": "string"},
+          "detection_confidence": {"type": "number", "minimum": 0, "maximum": 1},
+          "class_confidence": {"type": "number", "minimum": 0, "maximum": 1},
+          "severity": {"type": "string", "enum": ["Acceptable", "Marginal NG", "NG", "Gross NG"]},
+          "severity_confidence": {"type": "number", "minimum": 0, "maximum": 1},
+          "severity_probabilities": {
+            "type": "object",
+            "required": ["Acceptable", "Marginal NG", "NG", "Gross NG"],
+            "additionalProperties": false,
+            "properties": {
+              "Acceptable": {"type": "number", "minimum": 0, "maximum": 1},
+              "Marginal NG": {"type": "number", "minimum": 0, "maximum": 1},
+              "NG": {"type": "number", "minimum": 0, "maximum": 1},
+              "Gross NG": {"type": "number", "minimum": 0, "maximum": 1}
+            }
+          },
+          "bbox_xyxy": {"type": "array", "minItems": 4, "maxItems": 4, "items": {"type": "number"}},
+          "mask_ref": {"type": "string", "description": "mock:// reference; no actual mask image"}
+        }
+      }
+    }
+  }
+}

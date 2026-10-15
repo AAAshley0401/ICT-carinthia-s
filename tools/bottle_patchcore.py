@@ -3,8 +3,11 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import time
+import uuid
+from datetime import datetime, timezone
 from pathlib import Path
 
 import numpy as np
@@ -21,6 +24,14 @@ OUTPUT_ROOT = PROJECT_ROOT / "outputs"
 MODEL_PATH = PROJECT_ROOT / "models/bottle_patchcore_v1.pt"
 SIZE = 256
 MODEL_VERSION = "bottle-patchcore-style-resnet18-v1"
+
+
+def file_sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as source:
+        for block in iter(lambda: source.read(1024 * 1024), b""):
+            digest.update(block)
+    return digest.hexdigest()
 
 
 class FeatureExtractor:
@@ -124,6 +135,7 @@ def infer(extractor: FeatureExtractor, checkpoint: dict, image_path: Path,
             or not (root / "test" / relative.parts[1]).is_dir()):
         raise ValueError("image must be in a test subdirectory of the dataset category")
     sample_id = f"{root.name}_{relative.parts[1]}_{image_path.stem}"
+    image_digest = file_sha256(image_path)
     score_map = anomaly_map(extractor.patches(image_path), checkpoint["memory"], extractor.device)
     anomaly_score = float(score_map.max())
     binary_mask = (score_map > checkpoint["pixel_threshold"]).astype(np.uint8) * 255
@@ -154,6 +166,15 @@ def infer(extractor: FeatureExtractor, checkpoint: dict, image_path: Path,
         canvas.paste(part, (index * SIZE, 0))
     visualization_path = output_root / "visualization" / f"{sample_id}.png"
     canvas.save(visualization_path)
+    if file_sha256(image_path) != image_digest:
+        raise ValueError("source image changed during inference")
+    evidence_manifest = {
+        "manifest_version": "1.0",
+        "run_id": uuid.uuid4().hex,
+        "image_sha256": image_digest,
+        "mask_sha256": file_sha256(mask_path),
+        "created_at_utc": datetime.now(timezone.utc).isoformat(),
+    }
     result = {
         "sample_id": sample_id,
         "image_path": str(image_path.resolve()),
@@ -167,12 +188,15 @@ def infer(extractor: FeatureExtractor, checkpoint: dict, image_path: Path,
         "ground_truth_mask": str(ground_truth_path.resolve()) if ground_truth_path else None,
         "visualization": str(visualization_path.resolve()),
         "model_version": checkpoint["model_version"],
+        "evidence_manifest": evidence_manifest,
         "threshold_status": checkpoint["threshold_status"],
         "inference_ms": round((time.perf_counter() - started) * 1000, 2),
         "error": None,
     }
     result_path = output_root / "json" / f"{sample_id}.json"
-    result_path.write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
+    temporary_path = result_path.with_name(f"{sample_id}.{evidence_manifest['run_id']}.json.tmp")
+    temporary_path.write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
+    temporary_path.replace(result_path)
     return result
 
 

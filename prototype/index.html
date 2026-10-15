@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>毫芒 Hairline · AI 质检决策解释台</title>
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="live.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="brand"><span class="brand-mark" aria-hidden="true">⌁</span><div><strong>HAIRLINE <em>毫芒</em></strong><small>AI QUALITY DECISION AGENT</small></div></div>
+      <div class="topbar-right"><span class="system-label">INDUSTRIAL VISION × AGENT WORKFLOW</span><span id="scope-badge" class="mode-badge">DEMO MODE</span></div>
+    </header>
+
+    <main class="workspace">
+      <section class="hero-heading">
+        <div><p class="eyebrow"><span class="live-dot"></span> DECISION EXPLAINED · 决策可解释</p><h1>模型给出证据，Agent 判断下一步。</h1><p>从检测结果到风险分流，每一步都有可查看的依据。</p></div>
+        <div class="sample-ident"><span>SAMPLE / 当前样本</span><strong id="sample-id">—</strong><small id="source-note">—</small></div>
+      </section>
+
+      <section class="scenario-toolbar" aria-label="案例选择">
+        <div id="scenario-tabs" class="scenario-tabs" role="group" aria-label="选择演示案例"></div>
+        <div class="toolbar-actions"><label class="file-button">导入案例 JSON<input id="json-input" type="file" accept=".json,application/json" /></label><label class="file-button outline">预览本地图片<input id="image-input" type="file" accept="image/png,image/jpeg,image/webp" /></label></div>
+      </section>
+      <section class="live-run" aria-label="运行本地 Agent 流程">
+        <div class="live-run-title"><span class="live-dot"></span><strong>本地 Agent 流程</strong><small>调用现有 Detector → Validation → Router；mock 不分析图片</small></div>
+        <div class="live-run-controls"><label>样本 ID<input id="run-sample-id" value="W-0304" maxlength="64" autocomplete="off" /></label><label>演示情景<select id="run-scenario"><option value="boundary">边界证据</option><option value="normal">正常候选</option><option value="failure">工具失败</option></select></label><button id="run-api" type="button">运行本地流程 <span aria-hidden="true">↗</span></button></div>
+        <span id="api-status" class="api-status">正在检查本地接口…</span>
+      </section>
+      <section class="baseline-run" aria-label="查看真实图像证据">
+        <div class="baseline-run-title"><strong>MVTec bottle · 真实图像证据</strong><small>读取已生成的原图、预测 mask 与原始异常分数；Agent 分流未运行</small></div>
+        <div class="baseline-run-controls"><select id="baseline-sample" aria-label="选择真实推理样本"><option value="">正在读取样本…</option></select><button id="load-baseline" type="button">查看图像证据 <span aria-hidden="true">↗</span></button></div>
+      </section>
+      <div id="error-banner" class="error-banner" role="alert" hidden></div>
+
+      <section class="pipeline" aria-label="决策链路">
+        <div class="pipeline-item" id="pipe-evidence"><span class="pipeline-number">01</span><div><small>MODEL EVIDENCE</small><strong>模型证据</strong><em id="pipe-evidence-state">—</em></div></div>
+        <span class="pipeline-arrow" aria-hidden="true">→</span>
+        <div class="pipeline-item" id="pipe-validation"><span class="pipeline-number">02</span><div><small>EVIDENCE CHECK</small><strong>可信校验</strong><em id="pipe-validation-state">—</em></div></div>
+        <span class="pipeline-arrow" aria-hidden="true">→</span>
+        <div class="pipeline-item" id="pipe-routing"><span class="pipeline-number">03</span><div><small>AGENT ROUTING</small><strong>风险分流</strong><em id="pipe-routing-state">—</em></div></div>
+        <span class="pipeline-arrow" aria-hidden="true">→</span>
+        <div class="pipeline-item" id="pipe-human"><span class="pipeline-number">04</span><div><small>HUMAN IN LOOP</small><strong>人工交接</strong><em id="pipe-human-state">—</em></div></div>
+      </section>
+
+      <section class="story-grid">
+        <article class="surface evidence-column" aria-labelledby="evidence-title">
+          <div class="section-top"><div><p class="section-kicker">01 / MODEL EVIDENCE</p><h2 id="evidence-title">模型提供了什么？</h2></div><span id="evidence-count" class="micro-badge">—</span></div>
+          <div id="image-viewer" class="image-viewer"></div>
+          <p id="image-note" class="image-note">—</p>
+          <div class="evidence-highlights"><div class="metric-main"><span id="metric-label">异常存在概率</span><strong id="defect-probability">—</strong><small id="metric-kind">IMAGE LEVEL EVIDENCE</small></div><div id="evidence-summary" class="evidence-summary">—</div></div>
+          <div id="score-grid" class="score-grid"></div>
+          <div class="minor-heading"><h3>定位与分级记录</h3><span>每个分数代表不同证据</span></div>
+          <div id="defect-list" class="defect-list"></div>
+        </article>
+
+        <div class="judgement-column">
+          <article class="surface validation-panel" aria-labelledby="validation-title">
+            <div class="section-top"><div><p class="section-kicker">02 / EVIDENCE CHECK</p><h2 id="validation-title">这些证据可信吗？</h2></div><span id="validation-pill" class="state-pill">—</span></div>
+            <div id="check-list" class="check-list"></div>
+            <div class="check-result"><span id="check-result-icon" class="check-icon">—</span><div><strong id="check-result-title">—</strong><p id="validation-description">—</p></div></div>
+            <div id="validation-reasons" class="reason-list"></div>
+          </article>
+
+          <article class="surface decision-panel" aria-labelledby="decision-title">
+            <p class="section-kicker">03 / AGENT RECOMMENDATION</p><h2 id="decision-title">Agent 建议走哪条路？</h2>
+            <div class="decision-hero"><span>VALIDATED PATH / 实际验证路径</span><strong id="final-path">—</strong><small id="path-meaning">—</small></div>
+            <div class="why-panel"><span class="why-label">WHY THIS PATH?</span><p id="decision-explanation">—</p><div id="decision-proof" class="decision-proof"></div></div>
+            <div class="reason-group"><span>REASON CODES / 决策原因</span><div id="routing-reasons" class="reason-list"></div></div>
+            <div id="preview-card" class="preview-card" hidden></div>
+            <div id="human-handoff" class="handoff"></div>
+          </article>
+        </div>
+
+        <aside class="surface trace-panel" aria-labelledby="trace-title">
+          <div class="section-top"><div><p class="section-kicker">LIVE PROCESS / LOCAL RECORD</p><h2 id="trace-title">决策经过了什么？</h2></div></div>
+          <p id="trace-source" class="trace-source">—</p>
+          <div id="trace-list" class="trace-list"></div>
+          <div id="trace-tail" class="trace-tail">MODEL → CHECK → ROUTE → HUMAN</div>
+        </aside>
+      </section>
+
+      <section class="audit-strip" aria-label="来源与版本"><div><span class="audit-label">PROVENANCE / 来源与版本</span><span id="image-status" class="audit-status">—</span></div><div id="audit-grid" class="audit-grid"></div></section>
+      <footer>当前为比赛展示原型。合成回放和模拟预览均不可用于真实质检决策；正式处置由授权人员确认。</footer>
+    </main>
+  </div>
+  <script src="demo-cases.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

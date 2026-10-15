@@ -1,0 +1,119 @@
+[
+  {
+    "contract_version": "1.0",
+    "sample_id": "demo-normal",
+    "provenance": {
+      "source_kind": "LOCAL_WORKFLOW",
+      "demo_only": true,
+      "image_analyzed": false,
+      "decision_scope": "SIMULATION_PREVIEW",
+      "production_usable": false
+    },
+    "image": {"ref": null, "width": null, "height": null, "evidence_bound": false},
+    "detection": {
+      "status": "success",
+      "model_version": "mock-detector-v2",
+      "calibration_version": "mock-unvalidated",
+      "defect_probability": 0.05,
+      "defects": [],
+      "error_code": null
+    },
+    "validation": {"status": "INVALID_RESULT", "reason_code": "DEMO_RESULT"},
+    "routing": {
+      "path": "FAILED",
+      "reason_codes": ["DEMO_RESULT"],
+      "human_review_required": true,
+      "recommended_action": null,
+      "preview": {
+        "path": "NORMAL",
+        "reason_codes": ["LOW_DEFECT_PROBABILITY"],
+        "human_review_required": false,
+        "explanation": "模拟规则预览：异常概率低于原型正常候选阈值。"
+      }
+    },
+    "trace": [
+      {"stage": "DETECTION", "label": "DetectorAgent", "input_summary": {"sample_id": "demo-normal", "scenario": "normal"}, "output_summary": {"status": "success", "defect_probability": 0.05, "demo_only": true}, "reason_codes": []},
+      {"stage": "VALIDATION", "label": "ValidationAgent", "input_summary": {"demo_only": true}, "output_summary": {"status": "INVALID_RESULT"}, "reason_codes": ["DEMO_RESULT"]},
+      {"stage": "ROUTING", "label": "RoutingEngine", "input_summary": {"validation_status": "INVALID_RESULT"}, "output_summary": {"validated_path": "FAILED", "preview_path": "NORMAL"}, "reason_codes": ["DEMO_RESULT"]}
+    ]
+  },
+  {
+    "contract_version": "1.0",
+    "sample_id": "demo-boundary",
+    "provenance": {
+      "source_kind": "LOCAL_WORKFLOW",
+      "demo_only": true,
+      "image_analyzed": false,
+      "decision_scope": "SIMULATION_PREVIEW",
+      "production_usable": false
+    },
+    "image": {"ref": null, "width": null, "height": null, "evidence_bound": false},
+    "detection": {
+      "status": "success",
+      "model_version": "mock-detector-v2",
+      "calibration_version": "mock-unvalidated",
+      "defect_probability": 0.95,
+      "defects": [
+        {
+          "defect_id": "d1",
+          "defect_type": "scratch",
+          "detection_confidence": 0.96,
+          "class_confidence": 0.91,
+          "severity": "Marginal NG",
+          "severity_confidence": 0.52,
+          "severity_probabilities": {"Acceptable": 0.05, "Marginal NG": 0.52, "NG": 0.43, "Gross NG": 0.0},
+          "bbox_xyxy": [320, 390, 500, 470],
+          "mask_ref": "mock://masks/demo-boundary/d1"
+        }
+      ],
+      "error_code": null
+    },
+    "validation": {"status": "INVALID_RESULT", "reason_code": "DEMO_RESULT"},
+    "routing": {
+      "path": "FAILED",
+      "reason_codes": ["DEMO_RESULT"],
+      "human_review_required": true,
+      "recommended_action": null,
+      "preview": {
+        "path": "REVIEW",
+        "reason_codes": ["UNCERTAIN_SEVERITY", "SEVERITY_BOUNDARY"],
+        "human_review_required": true,
+        "explanation": "模拟规则预览：严重度分数低，Marginal NG 与 NG 的概率接近。"
+      }
+    },
+    "trace": [
+      {"stage": "DETECTION", "label": "DetectorAgent", "input_summary": {"sample_id": "demo-boundary", "scenario": "boundary"}, "output_summary": {"status": "success", "defect_probability": 0.95, "defect_count": 1, "demo_only": true}, "reason_codes": []},
+      {"stage": "VALIDATION", "label": "ValidationAgent", "input_summary": {"demo_only": true}, "output_summary": {"status": "INVALID_RESULT"}, "reason_codes": ["DEMO_RESULT"]},
+      {"stage": "ROUTING", "label": "RoutingEngine", "input_summary": {"validation_status": "INVALID_RESULT", "severity_confidence": 0.52, "severity_gap": 0.09}, "output_summary": {"validated_path": "FAILED", "preview_path": "REVIEW"}, "reason_codes": ["DEMO_RESULT"]}
+    ]
+  },
+  {
+    "contract_version": "1.0",
+    "sample_id": "replay-evidence-conflict",
+    "provenance": {
+      "source_kind": "SYNTHETIC_REPLAY",
+      "demo_only": true,
+      "image_analyzed": false,
+      "decision_scope": "SYNTHETIC_REPLAY",
+      "production_usable": false
+    },
+    "image": {"ref": null, "width": null, "height": null, "evidence_bound": false},
+    "detection": {
+      "status": "success",
+      "model_version": "synthetic-replay-fixture-v1",
+      "calibration_version": "synthetic-calibration-v1",
+      "defect_probability": 0.98,
+      "defects": [],
+      "error_code": null
+    },
+    "validation": {"status": "VALID", "reason_code": null},
+    "routing": {
+      "path": "FAILED",
+      "reason_codes": ["EVIDENCE_CONFLICT"],
+      "human_review_required": true,
+      "recommended_action": null,
+      "preview": null
+    },
+    "trace": []
+  }
+]

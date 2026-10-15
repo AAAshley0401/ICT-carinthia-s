@@ -1,0 +1,16 @@
+{
+  "sample_id": "bottle_missing_image",
+  "image_path": "data/raw/mvtec_anomaly_detection/bottle/test/good/does_not_exist.png",
+  "status": "failed",
+  "anomaly_score": null,
+  "predicted_mask": null,
+  "model_version": "bottle-patchcore-style-resnet18-v1",
+  "model_checkpoint_sha256": "c9cb572cfb02e9225ff6392955cde52c18ddcf370410ef319e6c49becf98a641",
+  "decision_scope": "EXPLORATORY_PUBLIC_DATA",
+  "production_usable": false,
+  "routing_usable": false,
+  "error": {
+    "code": "IMAGE_NOT_FOUND",
+    "message": "image file does not exist"
+  }
+}

@@ -1,0 +1,35 @@
+{
+  "sample_id": "bottle_good_000",
+  "image_path": "data/raw/mvtec_anomaly_detection/bottle/test/good/000.png",
+  "status": "success",
+  "anomaly_score": 1.5859284400939941,
+  "score_type": "raw_nearest_patch_distance_not_probability",
+  "is_anomaly": false,
+  "image_threshold": 1.9446750223636626,
+  "predicted_mask": "outputs/masks/bottle_good_000.png",
+  "mask_threshold": 1.489820122718811,
+  "ground_truth_mask": null,
+  "visualization": "outputs/visualization/bottle_good_000.png",
+  "model_version": "bottle-patchcore-style-resnet18-v1",
+  "evidence_manifest": {
+    "manifest_version": "1.0",
+    "run_id": "1d59a671c40c463ba0c5ed842805083b",
+    "image_sha256": "9e7bfe658efe9b6db2607a96405b4ac6880936eaf93b89c85bcd311122ceb57b",
+    "mask_sha256": "a2efbbff63400fbb9c580bf97945c4a1a208c15246209ffa09b978a6ed904d06",
+    "created_at_utc": "2026-10-14T04:35:00.468604+00:00"
+  },
+  "threshold_status": "PROVISIONAL_TRAIN_NORMAL_ONLY",
+  "inference_ms": 78.01,
+  "error": null,
+  "image_sha256": "9e7bfe658efe9b6db2607a96405b4ac6880936eaf93b89c85bcd311122ceb57b",
+  "predicted_mask_sha256": "a2efbbff63400fbb9c580bf97945c4a1a208c15246209ffa09b978a6ed904d06",
+  "model_checkpoint_sha256": "c9cb572cfb02e9225ff6392955cde52c18ddcf370410ef319e6c49becf98a641",
+  "decision_scope": "EXPLORATORY_PUBLIC_DATA",
+  "production_usable": false,
+  "routing_usable": false,
+  "unavailable_evidence": [
+    "calibrated_defect_probability",
+    "defect_classification",
+    "four_level_severity"
+  ]
+}

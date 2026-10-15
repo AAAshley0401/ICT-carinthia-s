@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hairline.local/contracts/severity_annotation_v1.schema.json",
+  "title": "Human adjudicated wafer defect annotations",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["annotation_version", "sample_id", "source_dataset", "image_ref", "image_sha256", "image_width", "image_height", "annotation_status", "image_label", "defects", "grade_standard_version", "reviewer_ids"],
+  "properties": {
+    "annotation_version": {"const": "1.0"},
+    "sample_id": {"type": "string", "minLength": 1},
+    "source_dataset": {"type": "string", "minLength": 1},
+    "image_ref": {"type": "string", "minLength": 1},
+    "image_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "image_width": {"type": "integer", "minimum": 1},
+    "image_height": {"type": "integer", "minimum": 1},
+    "annotation_status": {"enum": ["PENDING", "ADJUDICATED"]},
+    "image_label": {"enum": ["NORMAL", "DEFECT", null]},
+    "defects": {"type": "array", "items": {"$ref": "#/$defs/defect"}},
+    "grade_standard_version": {"type": ["string", "null"]},
+    "reviewer_ids": {"type": "array", "items": {"type": "string", "minLength": 1}, "uniqueItems": true}
+  },
+  "allOf": [
+    {"if": {"properties": {"annotation_status": {"const": "PENDING"}}},
+     "then": {"properties": {"image_label": {"const": null}, "defects": {"maxItems": 0}, "grade_standard_version": {"const": null}, "reviewer_ids": {"maxItems": 0}}}},
+    {"if": {"properties": {"annotation_status": {"const": "ADJUDICATED"}}},
+     "then": {"properties": {"image_label": {"enum": ["NORMAL", "DEFECT"]}, "grade_standard_version": {"type": "string", "minLength": 1}, "reviewer_ids": {"minItems": 2}}}},
+    {"if": {"properties": {"image_label": {"const": "NORMAL"}}},
+     "then": {"properties": {"defects": {"maxItems": 0}}}},
+    {"if": {"properties": {"image_label": {"const": "DEFECT"}}},
+     "then": {"properties": {"defects": {"minItems": 1}}}}
+  ],
+  "$defs": {
+    "defect": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["defect_id", "defect_type", "bbox_xyxy", "mask_ref", "severity"],
+      "properties": {
+        "defect_id": {"type": "string", "minLength": 1},
+        "defect_type": {"type": "string", "minLength": 1},
+        "bbox_xyxy": {"type": "array", "prefixItems": [{"type": "number"}, {"type": "number"}, {"type": "number"}, {"type": "number"}], "minItems": 4, "maxItems": 4},
+        "mask_ref": {"type": ["string", "null"]},
+        "severity": {"enum": ["Acceptable", "Marginal NG", "NG", "Gross NG"]}
+      }
+    }
+  }
+}

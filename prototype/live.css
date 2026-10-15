@@ -1,0 +1,27 @@
+.live-run{display:flex;align-items:center;gap:18px;flex-wrap:wrap;padding:11px 14px;margin:-4px 0 15px;border:1px solid #3b7569;border-radius:9px;background:linear-gradient(105deg,#153932,#102c34 65%,#0e2730)}
+.live-run-title{display:flex;align-items:center;gap:8px;min-width:0;flex:1}
+.live-run-title strong{font-size:11px;white-space:nowrap;color:#d3f9e3}
+.live-run-title small{font-size:9px;color:#8ab7ad;line-height:1.4}
+.live-run-controls{display:flex;align-items:end;gap:7px;flex-wrap:wrap}
+.live-run-controls label{display:flex;flex-direction:column;gap:4px;color:#78a89e;font-size:9px;font-weight:800;letter-spacing:.07em}
+.live-run-controls input,.live-run-controls select{height:31px;border:1px solid #447468;background:#0b242b;color:#e8faf2;border-radius:5px;padding:0 8px;font-size:10px;outline:none}
+.live-run-controls input{width:112px}
+.live-run-controls select{width:112px}
+.live-run-controls input:focus,.live-run-controls select:focus{border-color:#a7efba;box-shadow:0 0 0 2px #a7efba23}
+.live-run-controls button{height:31px;background:#a3f1c4;border:1px solid #a3f1c4;color:#09251f;border-radius:5px;padding:0 12px;font-size:10px;font-weight:900;white-space:nowrap}
+.live-run-controls button:hover{background:#c6ffda}
+.live-run-controls button:disabled{opacity:.55;cursor:wait}
+.api-status{font-size:9px;color:#94b4b1;white-space:nowrap}
+.api-status.ready{color:#a5ebbf}
+.api-status.error{color:#ffc39d}
+.baseline-run{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;padding:10px 14px;margin:-5px 0 15px;border:1px solid #496275;border-radius:9px;background:#102631}
+.baseline-run-title{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.baseline-run-title strong{font-size:11px;color:#d1e9f7}
+.baseline-run-title small{font-size:9px;color:#89a9b9}
+.baseline-run-controls{display:flex;gap:7px;flex-wrap:wrap}
+.baseline-run-controls select,.baseline-run-controls button{height:30px;border-radius:5px;font-size:10px}
+.baseline-run-controls select{max-width:220px;min-width:180px;border:1px solid #527386;background:#0a222d;color:#dbeaf4;padding:0 7px}
+.baseline-run-controls button{background:#b7d9ef;border:1px solid #b7d9ef;color:#102a38;padding:0 10px;font-weight:900}
+.baseline-run-controls button:hover{background:#d8edfa}
+.baseline-run-controls button:disabled{opacity:.55;cursor:wait}
+@media(max-width:1000px){.live-run-title{flex-basis:100%}.api-status{flex-basis:100%}}
