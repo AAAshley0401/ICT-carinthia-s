@@ -1,0 +1,12 @@
+{
+  "dataset": "Carinthia-S",
+  "source_sha256": "e7cc8507657611f89db33345d50fc7951e8784045684888dc997ac5298b7a3a2",
+  "manifest_sha256": "2a0abf407d4f146cfde4dff417074138ea3b276fd8c92e7ac378ee25c857b367",
+  "split_seed": 20261016,
+  "split_counts": {
+    "train": 3215,
+    "val": 688,
+    "test": 688
+  },
+  "class_6_mask_exception": "8b782473c99742e394df74b430412232"
+}

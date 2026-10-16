@@ -1,0 +1,32 @@
+{
+  "archive_name": "data.zip",
+  "archive_size": 139225942,
+  "archive_sha256": "e7cc8507657611f89db33345d50fc7951e8784045684888dc997ac5298b7a3a2",
+  "parts": [
+    {
+      "name": "data.zip.part-001",
+      "size": 33554432,
+      "sha256": "75fad235a6ecb40a0ce08ead7ff0d72e8581d6785ec4466fab2cd3673b06214d"
+    },
+    {
+      "name": "data.zip.part-002",
+      "size": 33554432,
+      "sha256": "96611ed130db78e05c1584de8d76fe89b751ad2e26301dbc2cb99a1e1490cfdc"
+    },
+    {
+      "name": "data.zip.part-003",
+      "size": 33554432,
+      "sha256": "ea9e84f1102034a1e5b57aae6bab3bf00b43cd4d735eb116072c40d24472fa23"
+    },
+    {
+      "name": "data.zip.part-004",
+      "size": 33554432,
+      "sha256": "71384a497e822452146ce893cf6a4ba8735d414836be2f0ead4d965116162600"
+    },
+    {
+      "name": "data.zip.part-005",
+      "size": 5008214,
+      "sha256": "e4523704804ddcfab3e7e1c826e3110306ca4b89440384b10356111cc7302cec"
+    }
+  ]
+}

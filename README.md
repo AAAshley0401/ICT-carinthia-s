@@ -20,6 +20,7 @@
 | [MVTec 数据标注审计](docs/08-MVTec数据标注审计.md) | 已下载数据的样本数、标注形式与四档接入结论 |
 | [MVTec 定位误差分析](docs/09-MVTec定位误差分析.md) | 两个正常训练阈值的定位权衡与失败样本 |
 | [AgentArts 接入路线](docs/10-AgentArts接入路线.md) | 公测通过后的平台操作步骤、限额与验收标志 |
+| [Carinthia-S 数据与固定评估集](datasets/carinthia-s/README.md) | 数据来源、无损分块重建、划分和已知异常 |
 
 ## 目录
 
@@ -27,7 +28,8 @@
 - `agentarts/`：平台接入说明；接口示例见 [agentarts/README.md](agentarts/README.md)。
 - `eval/`：评测脚本，待开发。
 - `prototype/`：可直接在浏览器打开的 Agent 决策工作台 MVP；入口见 [prototype/index.html](prototype/index.html)。
-- `data/`、`runs/`：本地数据和实验输出，均被 Git 忽略。
+- `datasets/carinthia-s/`：公开 Carinthia-S 原始 ZIP 的无损分块及冻结的评估清单。
+- `data/`、`runs/`：解压后的本地数据和实验输出，均被 Git 忽略。
 - `docs/competition/`：本地赛事附件，均被 Git 忽略。
 
 本地模拟服务可用 `python src/mock_inference_server.py` 启动；返回值只用于接入演示，不能作为模型成绩。

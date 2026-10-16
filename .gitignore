@@ -11,6 +11,7 @@
 # Datasets, experiment output, and model artifacts
 /data/raw/
 /data/processed/
+/datasets/carinthia-s/data.zip
 /runs/
 /checkpoints/
 /models/

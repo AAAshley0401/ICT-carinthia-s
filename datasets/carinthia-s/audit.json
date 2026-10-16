@@ -1,0 +1,68 @@
+{
+  "dataset": "Carinthia-S",
+  "source_archive": "data/raw/carinthia-s/data.zip",
+  "source_md5": "3a41242574635cf1302fab15accb7730",
+  "source_sha256": "e7cc8507657611f89db33345d50fc7951e8784045684888dc997ac5298b7a3a2",
+  "source_url": "https://zenodo.org/records/16895427",
+  "split_unit": "image",
+  "split_seed": 20261016,
+  "split_rule": "Within each class, sort by SHA256(seed:image_id); first round(15%) test, next round(15%) val, rest train; minimum one val and test image per class.",
+  "total_images": 4591,
+  "image_size": [
+    480,
+    480
+  ],
+  "image_mode": "L",
+  "label_counts": {
+    "1": 55,
+    "2": 8,
+    "3": 4008,
+    "4": 289,
+    "5": 4,
+    "6": 227
+  },
+  "split_counts": {
+    "train": {
+      "1": 39,
+      "2": 6,
+      "3": 2806,
+      "4": 203,
+      "5": 2,
+      "6": 159
+    },
+    "val": {
+      "1": 8,
+      "2": 1,
+      "3": 601,
+      "4": 43,
+      "5": 1,
+      "6": 34
+    },
+    "test": {
+      "1": 8,
+      "2": 1,
+      "3": 601,
+      "4": 43,
+      "5": 1,
+      "6": 34
+    }
+  },
+  "original_mask_modes": {
+    "L": 4587,
+    "RGB": 2,
+    "RGBA": 2
+  },
+  "empty_masks": 226,
+  "original_masks_with_intermediate_values": 395,
+  "duplicate_image_hashes": 0,
+  "missing_image_mask_pairs": 0,
+  "class_6_nonempty_masks": [
+    "8b782473c99742e394df74b430412232"
+  ],
+  "binary_mask_rule": "Convert original mask to grayscale L; nonzero -> 255, zero -> 0. Original masks are retained.",
+  "limitations": [
+    "No wafer/lot/group identifier exists in source metadata; split is image-level only.",
+    "Classes 2 and 5 have only one validation and one test image each; their individual metrics have high uncertainty.",
+    "One class-6 image has a nonempty original mask; it is flagged, not altered or removed."
+  ]
+}
