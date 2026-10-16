@@ -18,7 +18,13 @@ def images(directory: Path) -> list[Path]:
 def check(root: Path) -> dict[str, int]:
     counts: dict[str, int] = {}
     errors: list[str] = []
-    for relative in ("train/good", "test/good", "test/broken_large"):
+    test_root = root / "test"
+    defect_dirs = (sorted(path for path in test_root.iterdir()
+                          if path.is_dir() and path.name != "good")
+                   if test_root.is_dir() else [])
+    if not defect_dirs:
+        errors.append("missing defect test directories")
+    for relative in ("train/good", "test/good", *(f"test/{path.name}" for path in defect_dirs)):
         paths = images(root / relative)
         counts[relative] = len(paths)
         if not paths:
@@ -30,22 +36,27 @@ def check(root: Path) -> dict[str, int]:
             except Exception as exc:
                 errors.append(f"unreadable image {path}: {exc}")
 
-    masks = images(root / "ground_truth/broken_large")
-    counts["ground_truth/broken_large"] = len(masks)
-    for image_path in images(root / "test/broken_large"):
-        mask_path = root / "ground_truth/broken_large" / f"{image_path.stem}_mask.png"
-        if not mask_path.is_file():
-            errors.append(f"missing mask for {image_path.name}")
-            continue
-        try:
-            with Image.open(image_path) as image, Image.open(mask_path) as mask:
-                if image.size != mask.size:
-                    errors.append(f"size mismatch: {image_path.name} and {mask_path.name}")
-                mask.verify()
-        except Exception as exc:
-            errors.append(f"unreadable pair {image_path.name}: {exc}")
-    if len(masks) != counts["test/broken_large"]:
-        errors.append("mask count differs from broken_large test count")
+    for defect_dir in defect_dirs:
+        defect = defect_dir.name
+        masks = images(root / "ground_truth" / defect)
+        counts[f"ground_truth/{defect}"] = len(masks)
+        expected = {f"{path.stem}_mask.png" for path in images(defect_dir)}
+        actual = {path.name for path in masks}
+        for name in sorted(expected - actual):
+            errors.append(f"missing mask: {defect}/{name}")
+        for name in sorted(actual - expected):
+            errors.append(f"orphan mask: {defect}/{name}")
+        for image_path in images(defect_dir):
+            mask_path = root / "ground_truth" / defect / f"{image_path.stem}_mask.png"
+            if not mask_path.is_file():
+                continue
+            try:
+                with Image.open(image_path) as image, Image.open(mask_path) as mask:
+                    if image.size != mask.size:
+                        errors.append(f"size mismatch: {defect}/{image_path.name}")
+                    mask.verify()
+            except Exception as exc:
+                errors.append(f"unreadable pair {defect}/{image_path.name}: {exc}")
     print("Dataset: bottle")
     for name, count in counts.items():
         print(f"{name}: {count} images" if "ground_truth" not in name else f"{name}: {count} masks")
