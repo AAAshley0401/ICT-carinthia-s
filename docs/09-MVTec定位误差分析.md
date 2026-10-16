@@ -13,8 +13,10 @@
 
 更严格的阈值减少了明显的过度分割，平均 IoU 增加约 0.072；同时 `contamination` 的召回下降，不能只按 IoU 宣称全面改进。最差样本 `bottle_contamination_018` 的真值仅 375 像素，v1 预测 6,480 像素、IoU 0.058；v2 仍预测 4,837 像素、IoU 0.078。模型能发现异常，但范围不够精确。
 
-对照图保存在 `outputs/figures/bottle_contamination_018_comparison.png`：原图、真值、q=.995 预测、q=.999 预测。真值仅供离线评测，不会进入推理工作台或 Agent 输入。图由 [`tools/render_localization_comparison.py`](../tools/render_localization_comparison.py) 从原图和两个 checkpoint 重新生成，输出时记录原图、真值和 checkpoint 的 SHA-256。
+对照图保存在 `outputs/figures/bottle_contamination_018_comparison.png`：原图、真值、q=.995 预测、q=.999 预测。真值仅供离线评测，不会进入推理工作台或 Agent 输入。图由 [`algorithm/tools/render_localization_comparison.py`](../algorithm/tools/render_localization_comparison.py) 从原图和两个 checkpoint 重新生成，输出时记录原图、真值和 checkpoint 的 SHA-256。
 
-可复算脚本为 [`tools/evaluate_localization_failures.py`](../tools/evaluate_localization_failures.py)，完整逐样本报告位于 Git 忽略的 `outputs/evaluation/bottle_localization_failures_v1.json` 与 `outputs/evaluation/bottle_localization_failures_q999_v2.json`。脚本直接从冻结 checkpoint、原图和真值 mask 重新计算，不依赖可能被后续运行覆盖的 `outputs/masks`。v1 平均 IoU 与已有完整评测报告一致。
+为补齐展示证据的权重追溯，两个版本随后各自重新跑完整 `bottle/test`，结果保存到 `outputs/experiments/bottle_q995_bound` 和 `outputs/experiments/bottle_q999_bound`。每个目录包含 83 条记录，manifest 同时保存原图、预测 mask、checkpoint SHA-256 和预处理标识；服务端只读取这两个 `_bound` 目录做版本对照。重新运行后的指标与上表一致（q=.995 平均 IoU `0.3791`，q=.999 平均 IoU `0.4509`），但这仍是 MVTec 定位实验，不提供四档严重度，也不触发 Agent 路由。
+
+可复算脚本为 [`algorithm/tools/evaluate_localization_failures.py`](../algorithm/tools/evaluate_localization_failures.py)，完整逐样本报告位于 Git 忽略的 `outputs/evaluation/bottle_localization_failures_v1.json` 与 `outputs/evaluation/bottle_localization_failures_q999_v2.json`。脚本直接从冻结 checkpoint、原图和真值 mask 重新计算，不依赖可能被后续运行覆盖的 `outputs/masks`。v1 平均 IoU 与已有完整评测报告一致。
 
 这些结果只说明公开 bottle 数据上的定位表现。比较结果属于探索性分析，不应反复使用官方测试集选择最终阈值；下一轮如需定型，应在独立验证集上确定阈值后再做一次锁定评估。像素 mask 也不提供四档严重度标签，因此本结果不进入 Agent 路由。

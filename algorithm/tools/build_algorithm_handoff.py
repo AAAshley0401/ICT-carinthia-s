@@ -8,7 +8,7 @@ import json
 from pathlib import Path
 
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 VARIANTS = {
     "screw_resnet18_aligned": (
         "models/screw_aligned_fixed128.pt",
@@ -133,7 +133,7 @@ def build(output_path: Path) -> dict:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path,
-                        default=ROOT / "algorithm_outputs/baseline_handoff_v1.json")
+                        default=ROOT / "algorithm/outputs/baseline_handoff_v1.json")
     args = parser.parse_args()
     build(args.output)
 

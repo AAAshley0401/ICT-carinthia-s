@@ -8,7 +8,7 @@ from pathlib import Path
 from PIL import Image
 
 
-DEFAULT_ROOT = Path(__file__).resolve().parents[1] / "data/raw/mvtec_anomaly_detection/bottle"
+DEFAULT_ROOT = Path(__file__).resolve().parents[2] / "data/raw/mvtec_anomaly_detection/bottle"
 
 
 def images(directory: Path) -> list[Path]:

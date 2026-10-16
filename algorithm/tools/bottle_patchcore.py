@@ -18,7 +18,7 @@ from torchvision import transforms
 from torchvision.models import ResNet18_Weights, resnet18
 
 
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
 DATA_ROOT = PROJECT_ROOT / "data/raw/mvtec_anomaly_detection/bottle"
 OUTPUT_ROOT = PROJECT_ROOT / "outputs"
 MODEL_PATH = PROJECT_ROOT / "models/bottle_patchcore_v1.pt"
@@ -124,7 +124,8 @@ def fit(extractor: FeatureExtractor, root: Path, model_path: Path, *, train_coun
 
 
 def infer(extractor: FeatureExtractor, checkpoint: dict, image_path: Path,
-          output_root: Path, root: Path) -> dict:
+          output_root: Path, root: Path, *, checkpoint_sha256: str | None = None,
+          include_ground_truth: bool = False) -> dict:
     started = time.perf_counter()
     if not image_path.is_file():
         raise FileNotFoundError(image_path)
@@ -151,7 +152,7 @@ def infer(extractor: FeatureExtractor, checkpoint: dict, image_path: Path,
         0.55 * overlay[binary_mask > 0] + 0.45 * np.array([255, 0, 0])
     ).astype(np.uint8)
     ground_truth_path = None
-    if relative.parts[1] != "good":
+    if include_ground_truth and relative.parts[1] != "good":
         candidate = root / "ground_truth" / relative.parts[1] / f"{image_path.stem}_mask.png"
         if candidate.is_file():
             ground_truth_path = candidate
@@ -159,10 +160,9 @@ def infer(extractor: FeatureExtractor, checkpoint: dict, image_path: Path,
         with Image.open(ground_truth_path) as ground_truth:
             gt = ground_truth.convert("L").resize((SIZE, SIZE), Image.Resampling.NEAREST)
         gt_view = Image.fromarray(np.repeat(np.asarray(gt)[:, :, None], 3, axis=2))
-    else:
-        gt_view = Image.new("RGB", (SIZE, SIZE))
-    canvas = Image.new("RGB", (SIZE * 3, SIZE))
-    for index, part in enumerate((original, Image.fromarray(overlay), gt_view)):
+    panels = (original, Image.fromarray(overlay), gt_view) if ground_truth_path else (original, Image.fromarray(overlay))
+    canvas = Image.new("RGB", (SIZE * len(panels), SIZE))
+    for index, part in enumerate(panels):
         canvas.paste(part, (index * SIZE, 0))
     visualization_path = output_root / "visualization" / f"{sample_id}.png"
     canvas.save(visualization_path)
@@ -175,6 +175,9 @@ def infer(extractor: FeatureExtractor, checkpoint: dict, image_path: Path,
         "mask_sha256": file_sha256(mask_path),
         "created_at_utc": datetime.now(timezone.utc).isoformat(),
     }
+    if checkpoint_sha256 is not None:
+        evidence_manifest["checkpoint_sha256"] = checkpoint_sha256
+        evidence_manifest["preprocessing"] = checkpoint["preprocessing"]
     result = {
         "sample_id": sample_id,
         "image_path": str(image_path.resolve()),
@@ -223,8 +226,12 @@ def main() -> None:
                          memory_size=args.memory_size, pixel_quantile=args.pixel_quantile,
                          model_version=args.model_version,
                          image_calibration_count=args.image_calibration_count)
+        checkpoint_digest = file_sha256(args.model_path)
     else:
+        checkpoint_digest = file_sha256(args.model_path)
         checkpoint = torch.load(args.model_path, map_location="cpu", weights_only=True)
+        if file_sha256(args.model_path) != checkpoint_digest:
+            raise ValueError("checkpoint changed while loading")
         if (checkpoint.get("model_version") != args.model_version or
                 checkpoint.get("preprocessing") != "resize_full_image_256x256_imagenet_normalize"):
             raise ValueError("checkpoint version does not match this baseline")
@@ -240,7 +247,8 @@ def main() -> None:
     ]
     for path in images:
         try:
-            result = infer(extractor, checkpoint, path, args.output_root, args.root)
+            result = infer(extractor, checkpoint, path, args.output_root, args.root,
+                           checkpoint_sha256=checkpoint_digest)
         except (FileNotFoundError, OSError, ValueError) as exc:
             result = {
                 "sample_id": path.stem,

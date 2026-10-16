@@ -40,6 +40,8 @@ def inspect_record(record: Any) -> dict[str, Any]:
         available.append("predicted_mask")
         if isinstance(manifest, dict) and manifest.get("image_sha256") and manifest.get("mask_sha256"):
             available.append("image_and_mask_digest_fields_present")
+        if isinstance(manifest, dict) and manifest.get("checkpoint_sha256") and manifest.get("preprocessing"):
+            available.append("checkpoint_digest_and_preprocessing_fields_present")
         return {"kind": "raw_anomaly_baseline", "available": available,
                 "missing": list(REQUIRED_CAPABILITIES)}
 

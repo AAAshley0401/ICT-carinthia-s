@@ -12,7 +12,7 @@ import numpy as np
 import torch
 from PIL import Image
 
-from bottle_patchcore import DATA_ROOT, MODEL_PATH, OUTPUT_ROOT, SIZE, FeatureExtractor, infer
+from bottle_patchcore import DATA_ROOT, MODEL_PATH, OUTPUT_ROOT, SIZE, FeatureExtractor, file_sha256, infer
 
 
 def image_auc(positive: list[float], negative: list[float]) -> float:
@@ -23,7 +23,10 @@ def image_auc(positive: list[float], negative: list[float]) -> float:
 
 
 def evaluate(root: Path, output_root: Path, model_path: Path) -> dict:
+    checkpoint_digest = file_sha256(model_path)
     checkpoint = torch.load(model_path, map_location="cpu", weights_only=True)
+    if file_sha256(model_path) != checkpoint_digest:
+        raise ValueError("checkpoint changed while loading")
     if not isinstance(checkpoint.get("model_version"), str) or not checkpoint["model_version"]:
         raise ValueError("checkpoint model version missing")
     if checkpoint.get("preprocessing") != "resize_full_image_256x256_imagenet_normalize":
@@ -43,7 +46,8 @@ def evaluate(root: Path, output_root: Path, model_path: Path) -> dict:
         if not paths:
             raise ValueError(f"no test images in {category}")
         for path in paths:
-            result = infer(extractor, checkpoint, path, output_root, root)
+            result = infer(extractor, checkpoint, path, output_root, root,
+                           checkpoint_sha256=checkpoint_digest, include_ground_truth=True)
             if category != "good" and result["ground_truth_mask"] is None:
                 raise ValueError(f"ground-truth mask missing for {path}")
             result["category"] = category
@@ -75,7 +79,7 @@ def evaluate(root: Path, output_root: Path, model_path: Path) -> dict:
             normal_predicted_pixels += int(np.count_nonzero(predicted))
 
     try:
-        commit = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=Path(__file__).resolve().parents[1],
+        commit = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=Path(__file__).resolve().parents[2],
                                          text=True, stderr=subprocess.DEVNULL).strip()
     except (OSError, subprocess.CalledProcessError):
         commit = None
@@ -87,6 +91,8 @@ def evaluate(root: Path, output_root: Path, model_path: Path) -> dict:
         "evaluated_at_utc": datetime.now(timezone.utc).isoformat(),
         "code_commit": commit,
         "model_version": checkpoint["model_version"],
+        "checkpoint_sha256": checkpoint_digest,
+        "preprocessing": checkpoint["preprocessing"],
         "threshold_status": checkpoint["threshold_status"],
         "training": {
             "normal_memory_images": checkpoint["train_count"],

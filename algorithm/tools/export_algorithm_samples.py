@@ -27,9 +27,14 @@ def relative_path(path: str | None) -> str | None:
 
 
 def export(root: Path, model_path: Path, output_dir: Path) -> dict[str, Path]:
+    checkpoint_digest = sha256(model_path)
     checkpoint = torch.load(model_path, map_location="cpu", weights_only=True)
+    if sha256(model_path) != checkpoint_digest:
+        raise ValueError("checkpoint changed while loading")
     if checkpoint.get("dataset_category", "bottle") != "bottle" or root.name != "bottle":
         raise ValueError("this export is defined for the bottle baseline only")
+    if checkpoint.get("preprocessing") != "resize_full_image_256x256_imagenet_normalize":
+        raise ValueError("unsupported checkpoint preprocessing")
     torch.set_num_threads(min(torch.get_num_threads(), 8))
     extractor = FeatureExtractor(torch.device("cuda" if torch.cuda.is_available() else "cpu"))
     examples = {
@@ -41,13 +46,14 @@ def export(root: Path, model_path: Path, output_dir: Path) -> dict[str, Path]:
     for name, image_path in examples.items():
         if not image_path.is_file():
             raise FileNotFoundError(image_path)
-        result = infer(extractor, checkpoint, image_path, PROJECT_ROOT / "outputs", root)
+        result = infer(extractor, checkpoint, image_path, PROJECT_ROOT / "outputs", root,
+                       checkpoint_sha256=checkpoint_digest, include_ground_truth=True)
         for field in ("image_path", "predicted_mask", "ground_truth_mask", "visualization"):
             result[field] = relative_path(result[field])
         result.update({
             "image_sha256": sha256(image_path),
             "predicted_mask_sha256": sha256(PROJECT_ROOT / result["predicted_mask"]),
-            "model_checkpoint_sha256": sha256(model_path),
+            "model_checkpoint_sha256": checkpoint_digest,
             "decision_scope": "EXPLORATORY_PUBLIC_DATA",
             "production_usable": False,
             "routing_usable": False,
@@ -69,7 +75,7 @@ def export(root: Path, model_path: Path, output_dir: Path) -> dict[str, Path]:
             "anomaly_score": None,
             "predicted_mask": None,
             "model_version": checkpoint["model_version"],
-            "model_checkpoint_sha256": sha256(model_path),
+            "model_checkpoint_sha256": checkpoint_digest,
             "decision_scope": "EXPLORATORY_PUBLIC_DATA",
             "production_usable": False,
             "routing_usable": False,
@@ -87,7 +93,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", type=Path, default=DATA_ROOT)
     parser.add_argument("--model-path", type=Path, default=MODEL_PATH)
-    parser.add_argument("--output-dir", type=Path, default=PROJECT_ROOT / "algorithm_outputs")
+    parser.add_argument("--output-dir", type=Path, default=PROJECT_ROOT / "algorithm/outputs")
     args = parser.parse_args()
     print(json.dumps({name: str(path.resolve()) for name, path in
                       export(args.root, args.model_path, args.output_dir).items()},

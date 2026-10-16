@@ -62,7 +62,10 @@ def thresholds_from_normal_training(
 def evaluate(root: Path, model_path: Path, output_root: Path,
              low_quantile: float, high_quantile: float,
              expected_image_calibration_count: int | None = None) -> dict:
+    checkpoint_digest = file_sha256(model_path)
     checkpoint = torch.load(model_path, map_location="cpu", weights_only=True)
+    if file_sha256(model_path) != checkpoint_digest:
+        raise ValueError("checkpoint changed while loading")
     if checkpoint.get("dataset_category") != root.name:
         raise ValueError("checkpoint category does not match dataset root")
     if checkpoint.get("preprocessing") != "resize_full_image_256x256_imagenet_normalize":
@@ -94,7 +97,8 @@ def evaluate(root: Path, model_path: Path, output_root: Path,
         if not images:
             raise ValueError(f"no test images in {category}")
         for image_path in images:
-            result = infer(extractor, checkpoint, image_path, output_root, root)
+            result = infer(extractor, checkpoint, image_path, output_root, root,
+                           checkpoint_sha256=checkpoint_digest, include_ground_truth=True)
             if category.name != "good" and result["ground_truth_mask"] is None:
                 raise ValueError(f"ground-truth mask missing for {image_path}")
             score = result["anomaly_score"]
@@ -139,7 +143,7 @@ def evaluate(root: Path, model_path: Path, output_root: Path,
                          0.5 * np.count_nonzero(comparisons == 0)) / comparisons.size)
     try:
         commit = subprocess.check_output(["git", "rev-parse", "HEAD"], text=True,
-                                         cwd=Path(__file__).resolve().parents[1],
+                                         cwd=Path(__file__).resolve().parents[2],
                                          stderr=subprocess.DEVNULL).strip()
     except (OSError, subprocess.CalledProcessError):
         commit = None
@@ -154,7 +158,7 @@ def evaluate(root: Path, model_path: Path, output_root: Path,
             "evaluate_review_band.py": file_sha256(Path(__file__)),
             "fit_fixed_calibration.py": file_sha256(Path(__file__).with_name("fit_fixed_calibration.py")),
         },
-        "checkpoint_sha256": file_sha256(model_path),
+        "checkpoint_sha256": checkpoint_digest,
         "input_transform_manifest_sha256": checkpoint.get("input_transform_manifest_sha256"),
         "model_version": checkpoint["model_version"],
         "feature_backbone": checkpoint.get("feature_backbone", RESNET18_NAME),
