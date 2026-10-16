@@ -1,0 +1,22 @@
+{
+  "dataset": "Carinthia-S",
+  "split_manifest_sha256": "2a0abf407d4f146cfde4dff417074138ea3b276fd8c92e7ac378ee25c857b367",
+  "seed": 20261016,
+  "epochs": 5,
+  "batch_size": 16,
+  "size": 128,
+  "base": 16,
+  "lr": 0.001,
+  "device": "cuda",
+  "max_train_batches": null,
+  "labels": [
+    "1",
+    "2",
+    "3",
+    "4",
+    "5",
+    "6"
+  ],
+  "mask_threshold": 0.5,
+  "note": "Raw softmax scores are not calibrated probabilities; do not use for automated disposition."
+}

@@ -21,14 +21,16 @@
 | [MVTec 定位误差分析](docs/09-MVTec定位误差分析.md) | 两个正常训练阈值的定位权衡与失败样本 |
 | [AgentArts 接入路线](docs/10-AgentArts接入路线.md) | 公测通过后的平台操作步骤、限额与验收标志 |
 | [Carinthia-S 数据与固定评估集](datasets/carinthia-s/README.md) | 数据来源、无损分块重建、划分和已知异常 |
+| [Carinthia-S 真实模型与人工复核](docs/11-Carinthia-S闭环.md) | 定位与分类基线、人工分流、复核页面和决策留痕 |
 
 ## 目录
 
-- `src/`：模型与推理服务；目前只有不读图的模拟接口。
+- `src/`：模型与推理服务；Carinthia-S 已有真实图像推理及本地人工复核接口，另保留模拟接口。
 - `agentarts/`：平台接入说明；接口示例见 [agentarts/README.md](agentarts/README.md)。
-- `eval/`：评测脚本，待开发。
+- `eval/`：数据、模型与人工分流的评测脚本。
 - `prototype/`：可直接在浏览器打开的 Agent 决策工作台 MVP；入口见 [prototype/index.html](prototype/index.html)。
 - `datasets/carinthia-s/`：公开 Carinthia-S 原始 ZIP 的无损分块及冻结的评估清单。
+- `artifacts/carinthia-s/`：训练出的基线权重、预测清单与评估报告。
 - `data/`、`runs/`：解压后的本地数据和实验输出，均被 Git 忽略。
 - `docs/competition/`：本地赛事附件，均被 Git 忽略。
 

@@ -1,0 +1,522 @@
+[
+  {
+    "epoch": 1,
+    "train_loss": 0.8814627593429527,
+    "val": {
+      "accuracy": 0.8909883720930233,
+      "macro_f1": 0.49273774963959016,
+      "per_class": {
+        "1": {
+          "support": 8,
+          "precision": 0.8,
+          "recall": 0.5,
+          "f1": 0.6153846153846154
+        },
+        "2": {
+          "support": 1,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0
+        },
+        "3": {
+          "support": 601,
+          "precision": 0.9925925925925926,
+          "recall": 0.891846921797005,
+          "f1": 0.939526730937774
+        },
+        "4": {
+          "support": 43,
+          "precision": 0.8666666666666667,
+          "recall": 0.9069767441860465,
+          "f1": 0.8863636363636364
+        },
+        "5": {
+          "support": 1,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0
+        },
+        "6": {
+          "support": 34,
+          "precision": 0.3469387755102041,
+          "recall": 1.0,
+          "f1": 0.5151515151515151
+        }
+      },
+      "confusion_matrix": [
+        [
+          4,
+          0,
+          0,
+          3,
+          0,
+          1
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          1
+        ],
+        [
+          1,
+          0,
+          536,
+          2,
+          0,
+          62
+        ],
+        [
+          0,
+          0,
+          4,
+          39,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          1,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          34
+        ]
+      ],
+      "positive_mask_images": 654,
+      "mean_dice_positive": 0.8318515268141512,
+      "mean_iou_positive": 0.7208827094858936,
+      "empty_mask_images": 34,
+      "empty_mask_image_false_positive_rate_at_50_pixels": 0.0,
+      "mask_threshold": 0.5,
+      "empty_mask_false_positive_min_pixels": 50,
+      "evaluated_images": 688
+    }
+  },
+  {
+    "epoch": 2,
+    "train_loss": 0.5248402489061973,
+    "val": {
+      "accuracy": 0.9811046511627907,
+      "macro_f1": 0.614499349534699,
+      "per_class": {
+        "1": {
+          "support": 8,
+          "precision": 0.6666666666666666,
+          "recall": 1.0,
+          "f1": 0.8
+        },
+        "2": {
+          "support": 1,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0
+        },
+        "3": {
+          "support": 601,
+          "precision": 0.9949664429530202,
+          "recall": 0.9866888519134775,
+          "f1": 0.9908103592314118
+        },
+        "4": {
+          "support": 43,
+          "precision": 0.8723404255319149,
+          "recall": 0.9534883720930233,
+          "f1": 0.9111111111111112
+        },
+        "5": {
+          "support": 1,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0
+        },
+        "6": {
+          "support": 34,
+          "precision": 1.0,
+          "recall": 0.9705882352941176,
+          "f1": 0.9850746268656716
+        }
+      },
+      "confusion_matrix": [
+        [
+          8,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          1,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          3,
+          0,
+          593,
+          5,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          2,
+          41,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          1,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          1,
+          0,
+          0,
+          33
+        ]
+      ],
+      "positive_mask_images": 654,
+      "mean_dice_positive": 0.844520809428256,
+      "mean_iou_positive": 0.7432955805529955,
+      "empty_mask_images": 34,
+      "empty_mask_image_false_positive_rate_at_50_pixels": 0.0,
+      "mask_threshold": 0.5,
+      "empty_mask_false_positive_min_pixels": 50,
+      "evaluated_images": 688
+    }
+  },
+  {
+    "epoch": 3,
+    "train_loss": 0.33519634181883795,
+    "val": {
+      "accuracy": 0.9796511627906976,
+      "macro_f1": 0.6029212312281933,
+      "per_class": {
+        "1": {
+          "support": 8,
+          "precision": 0.75,
+          "recall": 0.75,
+          "f1": 0.75
+        },
+        "2": {
+          "support": 1,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0
+        },
+        "3": {
+          "support": 601,
+          "precision": 0.9867986798679867,
+          "recall": 0.9950083194675541,
+          "f1": 0.9908864954432477
+        },
+        "4": {
+          "support": 43,
+          "precision": 0.925,
+          "recall": 0.8604651162790697,
+          "f1": 0.891566265060241
+        },
+        "5": {
+          "support": 1,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0
+        },
+        "6": {
+          "support": 34,
+          "precision": 1.0,
+          "recall": 0.9705882352941176,
+          "f1": 0.9850746268656716
+        }
+      },
+      "confusion_matrix": [
+        [
+          6,
+          1,
+          1,
+          0,
+          0,
+          0
+        ],
+        [
+          1,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          1,
+          0,
+          598,
+          2,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          6,
+          37,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          1,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          1,
+          0,
+          0,
+          33
+        ]
+      ],
+      "positive_mask_images": 654,
+      "mean_dice_positive": 0.9015501302641415,
+      "mean_iou_positive": 0.8274299512454035,
+      "empty_mask_images": 34,
+      "empty_mask_image_false_positive_rate_at_50_pixels": 0.0,
+      "mask_threshold": 0.5,
+      "empty_mask_false_positive_min_pixels": 50,
+      "evaluated_images": 688
+    }
+  },
+  {
+    "epoch": 4,
+    "train_loss": 0.2589746370392652,
+    "val": {
+      "accuracy": 0.9186046511627907,
+      "macro_f1": 0.355621185640073,
+      "per_class": {
+        "1": {
+          "support": 8,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0
+        },
+        "2": {
+          "support": 1,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0
+        },
+        "3": {
+          "support": 601,
+          "precision": 0.9185867895545314,
+          "recall": 0.9950083194675541,
+          "f1": 0.9552715654952076
+        },
+        "4": {
+          "support": 43,
+          "precision": 0.9166666666666666,
+          "recall": 0.5116279069767442,
+          "f1": 0.6567164179104478
+        },
+        "5": {
+          "support": 1,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0
+        },
+        "6": {
+          "support": 34,
+          "precision": 1.0,
+          "recall": 0.35294117647058826,
+          "f1": 0.5217391304347826
+        }
+      },
+      "confusion_matrix": [
+        [
+          0,
+          0,
+          8,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          1,
+          0,
+          0,
+          0
+        ],
+        [
+          1,
+          0,
+          598,
+          2,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          21,
+          22,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          1,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          22,
+          0,
+          0,
+          12
+        ]
+      ],
+      "positive_mask_images": 654,
+      "mean_dice_positive": 0.8710124497282656,
+      "mean_iou_positive": 0.7828140915805539,
+      "empty_mask_images": 34,
+      "empty_mask_image_false_positive_rate_at_50_pixels": 0.0,
+      "mask_threshold": 0.5,
+      "empty_mask_false_positive_min_pixels": 50,
+      "evaluated_images": 688
+    }
+  },
+  {
+    "epoch": 5,
+    "train_loss": 0.17559182632770112,
+    "val": {
+      "accuracy": 0.9811046511627907,
+      "macro_f1": 0.7037120769191301,
+      "per_class": {
+        "1": {
+          "support": 8,
+          "precision": 0.5,
+          "recall": 0.875,
+          "f1": 0.6363636363636364
+        },
+        "2": {
+          "support": 1,
+          "precision": 0.5,
+          "recall": 1.0,
+          "f1": 0.6666666666666666
+        },
+        "3": {
+          "support": 601,
+          "precision": 0.9966386554621849,
+          "recall": 0.9866888519134775,
+          "f1": 0.9916387959866221
+        },
+        "4": {
+          "support": 43,
+          "precision": 0.9318181818181818,
+          "recall": 0.9534883720930233,
+          "f1": 0.942528735632184
+        },
+        "5": {
+          "support": 1,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0
+        },
+        "6": {
+          "support": 34,
+          "precision": 1.0,
+          "recall": 0.9705882352941176,
+          "f1": 0.9850746268656716
+        }
+      },
+      "confusion_matrix": [
+        [
+          7,
+          1,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          1,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          6,
+          0,
+          593,
+          2,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          2,
+          41,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          1,
+          0,
+          0
+        ],
+        [
+          1,
+          0,
+          0,
+          0,
+          0,
+          33
+        ]
+      ],
+      "positive_mask_images": 654,
+      "mean_dice_positive": 0.7940216923941096,
+      "mean_iou_positive": 0.695064942372255,
+      "empty_mask_images": 34,
+      "empty_mask_image_false_positive_rate_at_50_pixels": 0.0,
+      "mask_threshold": 0.5,
+      "empty_mask_false_positive_min_pixels": 50,
+      "evaluated_images": 688
+    }
+  }
+]

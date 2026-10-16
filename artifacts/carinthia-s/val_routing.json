@@ -1,0 +1,27 @@
+{
+  "policy": {
+    "version": "carinthia-review-v1",
+    "low_class_score": 0.9,
+    "minority_labels": [
+      "1",
+      "2",
+      "4",
+      "5"
+    ],
+    "class3_large_mask_fraction": 0.06,
+    "class6_mask_conflict_fraction": 0.003
+  },
+  "samples": 688,
+  "review_count": 91,
+  "review_fraction": 0.13226744186046513,
+  "classification_errors": 14,
+  "errors_sent_to_review": 14,
+  "error_capture_rate": 1.0,
+  "reason_counts": {
+    "CLASS_3_LARGE_MASK": 10,
+    "DEFECT_CLASS_WITH_EMPTY_MASK": 1,
+    "LOW_CLASS_SCORE": 50,
+    "MINORITY_CLASS_REVIEW": 49
+  },
+  "warning": "Selected on validation data; test figures are only an independent check, not a threshold-tuning signal."
+}

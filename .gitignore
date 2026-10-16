@@ -19,6 +19,7 @@
 /logs/
 *.log
 *.pt
+!/artifacts/carinthia-s/best.pt
 *.pth
 *.ckpt
 *.onnx

@@ -3,3 +3,4 @@ datasets/carinthia-s/source_labels.csv -text -diff
 datasets/carinthia-s/*.json text eol=lf
 datasets/carinthia-s/data.zip.part-* -text -diff
 eval/split_lock.json text eol=lf
+artifacts/carinthia-s/best.pt -text -diff

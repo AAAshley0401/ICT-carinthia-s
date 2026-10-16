@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Carinthia-S 人工复核</title>
+  <style>
+    :root { font-family: system-ui, "Microsoft YaHei", sans-serif; color: #17212b; background: #f3f6f9; }
+    * { box-sizing: border-box; }
+    body { margin: 0; }
+    header { padding: 22px 28px; background: #112d43; color: white; }
+    header h1 { margin: 0 0 5px; font-size: 22px; }
+    header p { margin: 0; color: #c5d6e2; font-size: 13px; }
+    main { display: grid; grid-template-columns: 310px 1fr; gap: 18px; max-width: 1400px; padding: 18px; margin: auto; }
+    section { background: white; border: 1px solid #dce5eb; border-radius: 10px; padding: 18px; }
+    h2 { margin: 0 0 14px; font-size: 18px; }
+    h3 { margin: 18px 0 8px; font-size: 15px; }
+    label { display: block; margin: 12px 0 4px; font-size: 13px; font-weight: 600; }
+    input, select, textarea, button { font: inherit; }
+    input, select, textarea { width: 100%; border: 1px solid #b8c8d2; border-radius: 6px; padding: 9px; background: white; }
+    textarea { min-height: 76px; resize: vertical; }
+    button { cursor: pointer; border: 0; border-radius: 6px; padding: 9px 13px; background: #1474aa; color: white; }
+    button:hover { background: #0f5f8c; }
+    .secondary { background: #e6eef3; color: #17364a; }
+    .secondary:hover { background: #d4e3ec; }
+    .stack { display: flex; gap: 8px; }
+    .stack input { flex: 1; min-width: 0; }
+    .queue button { width: 100%; text-align: left; margin: 5px 0; background: #e8f3f9; color: #17364a; }
+    .queue button:hover { background: #d3eaf5; }
+    .status { color: #526879; font-size: 13px; min-height: 18px; }
+    .error { color: #b52525; }
+    .grid { display: grid; grid-template-columns: minmax(260px, 480px) 1fr; gap: 18px; }
+    .imagebox { position: relative; width: min(100%, 480px); aspect-ratio: 1; border: 1px solid #c9d5dc; background: #111; }
+    .imagebox img { position: absolute; width: 100%; height: 100%; object-fit: contain; image-rendering: pixelated; }
+    .imagebox .mask { opacity: 1; }
+    .meta { font-size: 13px; line-height: 1.65; overflow-wrap: anywhere; }
+    .badge { display: inline-block; border-radius: 4px; padding: 3px 7px; background: #f7e4c6; color: #694304; }
+    .badge.candidate { background: #dcefe2; color: #236243; }
+    .events { padding-left: 18px; font-size: 13px; line-height: 1.6; overflow-wrap: anywhere; }
+    .note { padding: 10px; border-left: 3px solid #d59b32; background: #fff8e9; font-size: 13px; }
+    @media (max-width: 850px) { main, .grid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+<header>
+  <h1>Carinthia-S 缺陷复核工作台</h1>
+  <p>真实图像定位与六类分类 → 不确定样本送人工 → 保存结论及决策留痕</p>
+</header>
+<main>
+  <section>
+    <h2>待复核队列</h2>
+    <p class="note">本地演示：审核人姓名由本人填写，尚未接入身份认证；页面不执行产线处置。</p>
+    <div id="queue" class="queue"></div>
+    <button id="refresh" class="secondary">刷新队列</button>
+    <h3>检测一张图片</h3>
+    <label for="imageId">数据集图像 ID</label>
+    <div class="stack"><input id="imageId" placeholder="32 位图像 ID"><button id="inspect">检测</button></div>
+    <p id="message" class="status"></p>
+  </section>
+  <section>
+    <h2>样本与证据</h2>
+    <p id="empty">从左侧选择待复核样本，或输入图像 ID 开始检测。</p>
+    <div id="caseDetail" hidden>
+      <div class="grid">
+        <div>
+          <div class="imagebox"><img id="sourceImage" alt="原始 SEM 图"><img id="predMask" class="mask" alt="预测缺陷掩码"></div>
+          <p class="status">红色叠层为预测掩码。可暂时隐藏叠层：<input id="showMask" type="checkbox" checked style="width:auto">显示掩码</p>
+        </div>
+        <div class="meta">
+          <div>案件：<strong id="caseId"></strong></div>
+          <div>图像：<span id="sampleId"></span></div>
+          <div>路由：<span id="route" class="badge"></span></div>
+          <div>模型类别：<strong id="label"></strong>；原始分类分数：<strong id="score"></strong></div>
+          <div>原因：<span id="reasons"></span></div>
+          <div>掩码占比：<span id="maskFraction"></span></div>
+          <div>模型 SHA-256：<span id="modelSha"></span></div>
+          <div>原图 SHA-256：<span id="imageSha"></span></div>
+          <div>掩码 SHA-256：<span id="maskSha"></span></div>
+          <div>状态：<span id="status"></span></div>
+          <p class="note">分类分数尚未校准成概率；模型没有四档严重度输出。请结合图像和掩码独立判断。</p>
+        </div>
+      </div>
+      <h3>人工结论</h3>
+      <div class="grid">
+        <div>
+          <label for="reviewer">复核人</label><input id="reviewer" autocomplete="name">
+          <label for="conclusion">结论</label>
+          <select id="conclusion">
+            <option value="CONFIRM_CLASS">确认模型类别</option>
+            <option value="CORRECT_CLASS">修正类别</option>
+            <option value="UNSURE">无法确定</option>
+            <option value="RETAKE_IMAGE">建议重新采图</option>
+          </select>
+          <label for="finalLabel">最终类别</label>
+          <select id="finalLabel"><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option></select>
+          <label for="notes">依据与备注</label><textarea id="notes" placeholder="简述判定依据"></textarea>
+          <p><button id="saveReview">保存人工结论</button></p>
+        </div>
+        <div><h3>决策留痕</h3><ol id="events" class="events"></ol></div>
+      </div>
+    </div>
+  </section>
+</main>
+<script>
+  const $ = id => document.getElementById(id);
+  let currentCase = null;
+  async function api(url, options) {
+    const response = await fetch(url, options);
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || `HTTP ${response.status}`);
+    return data;
+  }
+  function message(text, error=false) { $('message').textContent = text; $('message').className = error ? 'status error' : 'status'; }
+  async function refreshQueue() {
+    const {cases} = await api('/api/carinthia/review-queue');
+    $('queue').replaceChildren();
+    if (!cases.length) { $('queue').textContent = '暂无待复核样本'; return; }
+    for (const item of cases) {
+      const button = document.createElement('button');
+      button.textContent = `${item.image_id.slice(0, 12)}…  类别 ${item.predicted_label || '未知'}`;
+      button.onclick = () => openCase(item.case_id);
+      $('queue').append(button);
+    }
+  }
+  async function openCase(caseId) {
+    const data = await api(`/api/carinthia/cases/${encodeURIComponent(caseId)}`);
+    currentCase = data;
+    $('empty').hidden = true; $('caseDetail').hidden = false;
+    $('caseId').textContent = data.case_id;
+    $('sampleId').textContent = data.image_id;
+    $('route').textContent = data.route;
+    $('route').className = data.route === 'MODEL_CANDIDATE' ? 'badge candidate' : 'badge';
+    $('label').textContent = data.predicted_label || '无结果';
+    $('score').textContent = data.prediction.class_score == null ? '无' : data.prediction.class_score.toFixed(3);
+    $('reasons').textContent = data.routing_decision.reason_codes.join('、') || '无';
+    $('maskFraction').textContent = data.prediction.mask_fraction == null ? '无' : `${(100 * data.prediction.mask_fraction).toFixed(2)}%`;
+    $('modelSha').textContent = data.model_sha256;
+    $('imageSha').textContent = data.image_sha256;
+    $('maskSha').textContent = data.prediction.predicted_mask_sha256 || '无';
+    $('status').textContent = data.status;
+    $('sourceImage').src = `/api/carinthia/cases/${encodeURIComponent(caseId)}/image`;
+    $('predMask').src = data.prediction.predicted_mask_sha256 ? `/api/carinthia/cases/${encodeURIComponent(caseId)}/preview-mask` : '';
+    $('predMask').hidden = !$('showMask').checked || !data.prediction.predicted_mask_sha256;
+    if (data.predicted_label) $('finalLabel').value = data.predicted_label;
+    $('events').replaceChildren();
+    for (const event of data.events) {
+      const li = document.createElement('li');
+      li.textContent = `${event.sequence}. ${event.event_type}｜${event.actor}｜${event.occurred_at}｜SHA ${event.event_hash.slice(0, 16)}…`;
+      $('events').append(li);
+    }
+  }
+  $('refresh').onclick = () => refreshQueue().catch(e => message(e.message, true));
+  $('inspect').onclick = async () => {
+    try {
+      const result = await api('/api/carinthia/inspect', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({image_id:$('imageId').value.trim()})});
+      await refreshQueue(); await openCase(result.case_id); message('检测已完成并保存。');
+    } catch (e) { message(e.message, true); }
+  };
+  $('showMask').onchange = () => { $('predMask').hidden = !$('showMask').checked || !currentCase?.prediction.predicted_mask_sha256; };
+  $('conclusion').onchange = () => { $('finalLabel').disabled = ['UNSURE','RETAKE_IMAGE'].includes($('conclusion').value); };
+  $('saveReview').onclick = async () => {
+    if (!currentCase) return;
+    try {
+      const conclusion = $('conclusion').value;
+      const finalLabel = ['UNSURE','RETAKE_IMAGE'].includes(conclusion) ? null : $('finalLabel').value;
+      await api(`/api/carinthia/cases/${encodeURIComponent(currentCase.case_id)}/reviews`, {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({reviewer:$('reviewer').value.trim(), conclusion, final_label:finalLabel, notes:$('notes').value.trim()})
+      });
+      await refreshQueue(); await openCase(currentCase.case_id); message('人工结论已保存。');
+    } catch (e) { message(e.message, true); }
+  };
+  refreshQueue().catch(e => message(e.message, true));
+</script>
+</body>
+</html>
