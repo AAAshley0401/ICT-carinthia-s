@@ -47,7 +47,9 @@ def validate_directory(directory: Path, output: Path | None = None) -> dict[str,
         "valid_count": sum(record["valid"] for record in records),
         "invalid_count": sum(not record["valid"] for record in records),
         "reason_counts": dict(reasons),
-        "agent_routing_enabled": bool(records) and all(record["valid"] for record in records),
+        # Shape validation alone cannot establish calibration, severity quality,
+        # evidence provenance, or approval for Agent routing.
+        "agent_routing_enabled": False,
         "ignored_files": ignored,
         "records": records,
     }
